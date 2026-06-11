@@ -57,8 +57,8 @@ export function ConsensusPanel({
                 className="flex items-center gap-2.5 rounded-xl bg-surface-inset px-3 py-2 ring-hair"
               >
                 <span
-                  className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-[7px]"
-                  style={{ backgroundColor: `${agent?.color ?? "#E85002"}22`, color: agent?.color ?? "#E85002" }}
+                  className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full text-white"
+                  style={{ background: agent?.color ?? "#E85002" }}
                 >
                   {agent ? <Icon icon={agent.icon} size={10} /> : agentId.slice(0, 2)}
                 </span>

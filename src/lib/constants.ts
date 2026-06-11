@@ -1,6 +1,6 @@
 import { Agent } from "@/types"
 import {
-  ChatBotIcon,
+  Rocket01Icon,
   AiContentGenerator01Icon,
   AiIdeaIcon,
   AiCloud02Icon,
@@ -17,7 +17,7 @@ export const AGENTS: Record<string, Agent> = {
     bgColor: "rgba(232,80,2,0.12)",
     description: "Delegates tasks, mediates debates and generates consensus across the team.",
     capabilities: ["Task delegation", "Consensus engine"],
-    icon: ChatBotIcon,
+    icon: Rocket01Icon,
   },
   pm: {
     id: "pm",

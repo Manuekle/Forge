@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
-import { SparklesIcon, Store01Icon, CloudIcon, AiChat01Icon, ArrowRight01Icon } from "@hugeicons/core-free-icons"
+import { SparklesIcon, Layers01Icon, Rocket01Icon, BrainIcon, ArrowRight01Icon } from "@hugeicons/core-free-icons"
 import { Icon } from "@/components/ui/icon"
 import { Modal } from "@/components/ui/modal"
 import { Input } from "@/components/ui/input"
@@ -16,9 +16,9 @@ interface CreateProjectModalProps {
 }
 
 const templates = [
-  { label: "Marketplace", icon: Store01Icon, desc: "Two-sided apps with payments", gradient: "#C10801, #F16001" },
-  { label: "SaaS", icon: CloudIcon, desc: "B2B tools and subscriptions", gradient: "#F16001, #E85002" },
-  { label: "AI Workspace", icon: AiChat01Icon, desc: "Multi-agent products", gradient: "#E85002, #D9C3AB" },
+  { label: "Marketplace", icon: Layers01Icon, desc: "Two-sided apps with buyers, sellers, and payments", gradient: "#C10801, #F16001" },
+  { label: "SaaS Product", icon: Rocket01Icon, desc: "B2B tools with subscriptions and dashboards", gradient: "#F16001, #E85002" },
+  { label: "AI Workspace", icon: BrainIcon, desc: "Multi-agent AI products with reasoning and memory", gradient: "#E85002, #D9C3AB" },
 ]
 
 export function CreateProjectModal({ open, onOpenChange, onCreated }: CreateProjectModalProps) {
@@ -47,24 +47,9 @@ export function CreateProjectModal({ open, onOpenChange, onCreated }: CreateProj
     setLoading(false)
   }
 
-  async function handleTemplate(template: string, label: string) {
-    setLoading(true)
-    const res = await fetch("/api/projects", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: `New ${label}`,
-        description: `Auto-generated from ${label} template`,
-        template,
-      }),
-    })
-    if (res.ok) {
-      const project = await res.json()
-      onOpenChange(false)
-      onCreated?.()
-      router.push(`/projects/${project.id}`)
-    }
-    setLoading(false)
+  function handleTemplate(label: string) {
+    setName(`New ${label}`)
+    setDesc(`Auto-generated from ${label} template`)
   }
 
   return (
@@ -104,7 +89,7 @@ export function CreateProjectModal({ open, onOpenChange, onCreated }: CreateProj
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.1 + i * 0.05 }}
-                    onClick={() => handleTemplate(t.label.toLowerCase().replace(" ", "-"), t.label)}
+                    onClick={() => handleTemplate(t.label)}
                     disabled={loading}
                     className="group rounded-2xl bg-surface p-4 text-left ring-hair transition-all duration-200 hover:-translate-y-0.5 hover:bg-surface-2 hover:ring-hair-strong lift-1 disabled:opacity-40"
                   >

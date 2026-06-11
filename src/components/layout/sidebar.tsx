@@ -2,13 +2,16 @@
 
 import { useEffect, useState, useRef } from "react"
 import { usePathname, useRouter } from "next/navigation"
+import Image from "next/image"
 import { signOut } from "next-auth/react"
 import {
-  DashboardSquare01Icon, AiFolder01Icon, ChatBotIcon, Settings02Icon, ArrowLeft01Icon, Add01Icon, SparklesIcon, Logout01Icon, Menu01Icon, AiUserIcon
+  DashboardSquare01Icon, AiFolder01Icon, ChatBotIcon, Settings02Icon, ArrowLeft01Icon, Add01Icon, SparklesIcon, Logout01Icon, Menu01Icon, AiUserIcon, ArrowUp01Icon, Tick01Icon, Edit01Icon
 } from "@hugeicons/core-free-icons"
 import { Icon } from "@/components/ui/icon"
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
+import { Modal } from "@/components/ui/modal"
+import { Button } from "@/components/ui/button"
 import { AGENTS } from "@/lib/constants"
 import type { StoredProject } from "@/lib/store"
 import type { AgentType } from "@/types"
@@ -26,18 +29,19 @@ interface SidebarProps {
   projectDescription?: string
   projectStatus?: string
   onBack?: () => void
+  onEditProject?: () => void
 }
 
 function Logo() {
   return (
     <div className="flex items-center gap-2.5 px-3 pb-6 pt-6">
-      <div className="flex h-8 w-8 items-center justify-center rounded-[11px] gradient-brand glow-brand">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M12 2L2 7l10 5 10-5-10-5z" />
-          <path d="M2 17l10 5 10-5" />
-          <path d="M2 12l10 5 10-5" />
-        </svg>
-      </div>
+      <Image
+        src="/logo.png"
+        alt="Forge"
+        width={32}
+        height={32}
+        className="h-8 w-8"
+      />
       <span className="text-[17px] font-semibold tracking-tight" style={{ fontFamily: "var(--font-syne)" }}>Forge</span>
     </div>
   )
@@ -45,6 +49,7 @@ function Logo() {
 
 function UserCard() {
   const [open, setOpen] = useState(false)
+  const [showUpgrade, setShowUpgrade] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   const router = useRouter()
 
@@ -60,7 +65,7 @@ function UserCard() {
     <div ref={ref} className="relative m-2">
       <button
         onClick={() => setOpen(!open)}
-        className="flex w-full items-center gap-3 rounded-2xl bg-surface-2 p-3 text-left lift-1 transition-colors hover:bg-surface-3"
+        className="flex w-full items-center gap-3 rounded-full bg-surface-2 p-3 text-left lift-1 transition-colors hover:bg-surface-3"
       >
         <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full gradient-brand text-white">
           <Icon icon={AiUserIcon} size={18} />
@@ -74,28 +79,38 @@ function UserCard() {
         </div>
       </button>
       {open && (
-        <div className="absolute bottom-full left-0 right-0 mb-1 overflow-hidden rounded-xl bg-surface-2 p-1 shadow-lg ring-hair">
+        <div className="absolute bottom-full left-0 right-0 mb-1 overflow-hidden rounded-xl bg-surface-2 p-1.5 shadow-lg ring-hair">
+          <button
+            onClick={() => { setShowUpgrade(true); setOpen(false) }}
+            className="flex w-full items-center gap-2 rounded-full px-4 py-2 text-xs font-medium text-brand transition-colors hover:bg-brand/10"
+          >
+            <Icon icon={ArrowUp01Icon} size={14} />
+            Upgrade plan
+          </button>
+          <div className="mx-3 my-1 h-px bg-hairline" />
           <button
             onClick={() => { router.push("/settings"); setOpen(false) }}
-            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs text-text-secondary transition-colors hover:bg-surface-3 hover:text-text-primary"
+            className="flex w-full items-center gap-2 rounded-full px-4 py-2 text-xs text-text-secondary transition-colors hover:bg-surface-3 hover:text-text-primary"
           >
             <Icon icon={Settings02Icon} size={14} />
             Settings
           </button>
           <button
             onClick={() => signOut({ callbackUrl: "/" })}
-            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs text-text-secondary transition-colors hover:bg-error/12 hover:text-error"
+            className="flex w-full items-center gap-2 rounded-full px-4 py-2 text-xs text-text-secondary transition-colors hover:bg-error/12 hover:text-error"
           >
             <Icon icon={Logout01Icon} size={14} />
             Sign out
           </button>
         </div>
       )}
+
+      <UpgradeModal open={showUpgrade} onOpenChange={setShowUpgrade} />
     </div>
   )
 }
 
-export function Sidebar({ projectMode, projectName, projectDescription, projectStatus }: SidebarProps) {
+export function Sidebar({ projectMode, projectName, projectDescription, projectStatus, onEditProject }: SidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
   const [recentProjects, setRecentProjects] = useState<StoredProject[]>([])
@@ -117,6 +132,7 @@ export function Sidebar({ projectMode, projectName, projectDescription, projectS
         description={projectDescription || ""}
         status={projectStatus || "planning"}
         onBack={() => router.push("/projects")}
+        onEditProject={onEditProject}
       />
     )
   }
@@ -214,17 +230,83 @@ export function Sidebar({ projectMode, projectName, projectDescription, projectS
   )
 }
 
+const plans = [
+  {
+    name: "Free", price: "$0", desc: "To try Forge out",
+    features: ["2 projects", "All 6 AI agents", "5 runs per month", "Markdown export"],
+    current: false,
+  },
+  {
+    name: "Pro", price: "$29", desc: "For teams that build",
+    features: ["Unlimited projects", "Full reasoning traces", "Decision history", "Versioned artifacts with diffs", "GitHub & Jira export"],
+    current: true,
+  },
+  {
+    name: "Enterprise", price: "Custom", desc: "For organizations",
+    features: ["SSO & RBAC", "Private Foundry IQ", "Custom agents & KBs", "Audit logs & compliance"],
+    current: false,
+  },
+]
+
+function UpgradeModal({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
+  return (
+    <Modal open={open} onOpenChange={onOpenChange} title="Upgrade plan" description="Choose the tier that fits your team.">
+      <div className="flex flex-col gap-3 pt-1">
+        {plans.map((plan) => (
+          <div
+            key={plan.name}
+            className={cn(
+              "rounded-2xl p-4 transition-all duration-200",
+              plan.current ? "ring-2 ring-brand bg-brand/5" : "bg-surface-2 ring-hair hover:ring-hair-strong"
+            )}
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-semibold text-text-primary">{plan.name}</span>
+                  {plan.current && (
+                    <span className="rounded-full bg-brand/15 px-2 py-0.5 text-[10px] font-medium text-brand">Current</span>
+                  )}
+                </div>
+                <div className="mt-1 text-xs text-text-secondary">{plan.desc}</div>
+              </div>
+              <div className="text-right">
+                <div className="text-base font-bold text-text-primary">{plan.price}</div>
+                {plan.name !== "Enterprise" && <div className="text-[10px] text-muted">/mo</div>}
+              </div>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5">
+              {plan.features.map((f) => (
+                <div key={f} className="flex items-center gap-1.5 text-[11px] text-text-secondary">
+                  <Icon icon={Tick01Icon} size={12} className="text-brand" />
+                  {f}
+                </div>
+              ))}
+            </div>
+            {!plan.current && (
+              <Button className="mt-4 w-full" size="sm" onClick={() => { onOpenChange(false) }}>
+                {plan.name === "Enterprise" ? "Contact sales" : `Upgrade to ${plan.name}`}
+              </Button>
+            )}
+          </div>
+        ))}
+      </div>
+    </Modal>
+  )
+}
+
 const wsAgents: AgentType[] = [
   "orchestrator", "pm", "ux", "architect", "qa", "scrum", "business",
 ]
 
 function ProjectSidebar({
-  name, description, status, onBack,
+  name, description, status, onBack, onEditProject,
 }: {
   name: string
   description: string
   status: string
   onBack: () => void
+  onEditProject?: () => void
 }) {
   const statusVariant =
     status === "active" ? "active" : status === "in_review" ? "in_review" : status === "archived" ? "archived" : "planning"
@@ -240,9 +322,21 @@ function ProjectSidebar({
         <span>Projects</span>
       </button>
 
-      <div className="mx-1 mb-4 rounded-2xl bg-surface-2 p-4 lift-1">
-        <div className="truncate text-sm font-semibold text-text-primary" style={{ fontFamily: "var(--font-syne)" }}>{name}</div>
-        <div className="mt-1 line-clamp-2 text-xs leading-relaxed text-text-secondary">{description}</div>
+      <div className="mx-1 mb-4 rounded-2xl bg-surface-2 p-4 lift-1 group">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-sm font-semibold text-text-primary" style={{ fontFamily: "var(--font-syne)" }}>{name}</div>
+            <div className="mt-1 line-clamp-2 text-xs leading-relaxed text-text-secondary">{description || "No description"}</div>
+          </div>
+          {onEditProject && (
+            <button
+              onClick={onEditProject}
+              className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-muted opacity-0 transition-all duration-200 hover:bg-surface-3 hover:text-text-primary group-hover:opacity-100"
+            >
+              <Icon icon={Edit01Icon} size={13} />
+            </button>
+          )}
+        </div>
         <div className="mt-2.5">
           <Badge variant={statusVariant} dot />
         </div>
@@ -259,8 +353,8 @@ function ProjectSidebar({
               key={agentKey}
               className="flex items-center gap-2.5 rounded-full px-3.5 py-2 text-xs text-text-secondary"
             >
-              <span className="flex h-5 w-5 items-center justify-center rounded-[7px]"
-                style={{ backgroundColor: `${agent.color}1F`, color: agent.color }}>
+              <span className="flex h-5 w-5 items-center justify-center rounded-full text-white"
+                style={{ background: agent.color }}>
                 <Icon icon={agent.icon} size={11} />
               </span>
               {agent.label}

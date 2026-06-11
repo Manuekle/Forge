@@ -11,6 +11,7 @@ interface ShellProps {
   projectDescription?: string
   projectStatus?: string
   latestRun?: { duration: number; id: string } | null
+  onEditProject?: () => void
 }
 
 export function Shell({
@@ -21,6 +22,7 @@ export function Shell({
   projectDescription,
   projectStatus,
   latestRun,
+  onEditProject,
 }: ShellProps) {
   return (
     <div className="relative flex h-screen overflow-hidden bg-canvas text-text-primary">
@@ -31,6 +33,7 @@ export function Shell({
         projectName={projectName}
         projectDescription={projectDescription}
         projectStatus={projectStatus}
+        onEditProject={onEditProject}
       />
       <div className="flex min-w-0 flex-1 flex-col p-2 pl-0">
         {/* Floating content panel — depth via surface + shadow, no borders */}

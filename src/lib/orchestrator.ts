@@ -388,6 +388,7 @@ export async function runAgentOrchestration(
   args: {
     projectName: string
     projectDescription: string
+    brief?: string | null
     template?: string | null
     projectMemory?: string
   },
@@ -396,11 +397,12 @@ export async function runAgentOrchestration(
   onPlan?: (plan: OrchestrationPlan) => Promise<void>,
   onEvent?: (event: RunEvent) => Promise<void>
 ): Promise<OrchestrationResult> {
-  const { projectName, projectDescription, template, projectMemory } = args
+  const { projectName, projectDescription, brief, template, projectMemory } = args
   const startTime = Date.now()
 
   const contextSummary = `Project: ${projectName}
 Description: ${projectDescription}
+${brief ? `\n## Detailed Context\n${brief}\n` : ""}
 ${template ? `Template: ${template}` : ""}
 ${projectMemory ? `\n${projectMemory}` : ""}`
 

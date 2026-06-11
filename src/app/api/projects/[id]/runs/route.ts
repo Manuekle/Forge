@@ -15,7 +15,7 @@ export async function GET(
 }
 
 export async function POST(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
@@ -38,6 +38,17 @@ export async function POST(
     } else {
       return NextResponse.json({ error: "A run is already in progress for this project" }, { status: 409 })
     }
+  }
+
+  // Parse optional brief from the request body
+  let brief: string | null = null
+  try {
+    const body = await request.json()
+    if (typeof body.brief === "string" && body.brief.trim()) {
+      brief = body.brief.trim()
+    }
+  } catch {
+    // no body or invalid JSON — proceed without brief
   }
 
   const run = await store.createRun(id)
@@ -76,6 +87,7 @@ export async function POST(
       {
         projectName: project.name,
         projectDescription: project.description,
+        brief,
         template: project.template,
         projectMemory,
       },

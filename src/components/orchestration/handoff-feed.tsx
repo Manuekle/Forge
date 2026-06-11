@@ -53,8 +53,8 @@ function AgentChip({ id }: { id: string }) {
   const color = agent?.color ?? "#E85002"
   return (
     <span
-      className="flex h-6 w-6 items-center justify-center rounded-[8px]"
-      style={{ backgroundColor: `${color}22`, color }}
+      className="flex h-6 w-6 items-center justify-center rounded-full text-white"
+      style={{ background: color }}
       title={agent?.label ?? id}
     >
       <Icon icon={agent?.icon ?? ChatBotIcon} size={11} />

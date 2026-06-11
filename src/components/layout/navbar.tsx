@@ -1,9 +1,5 @@
 "use client"
 
-import { SparklesIcon } from "@hugeicons/core-free-icons"
-import { Icon } from "@/components/ui/icon"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
 import { formatDuration } from "@/lib/utils"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { NotificationCenter } from "@/components/ui/notification-center"
@@ -15,10 +11,9 @@ interface NavbarProps {
 }
 
 export function Navbar({ breadcrumb = "Dashboard", projectMode, latestRun }: NavbarProps) {
-  const router = useRouter()
 
   return (
-    <div className="relative z-10 flex h-16 flex-shrink-0 items-center justify-between px-8">
+    <div className="relative z-10 flex h-16 flex-shrink-0 items-center justify-between px-4 md:px-8">
       <div className="flex items-center gap-2 text-sm">
         <span className="text-muted">Forge</span>
         <span className="text-faint">/</span>
@@ -29,15 +24,7 @@ export function Navbar({ breadcrumb = "Dashboard", projectMode, latestRun }: Nav
           <NotificationCenter />
           <ThemeToggle />
         </div>
-        {!projectMode && (
-          <>
-            <div className="mx-3 h-5 w-px bg-hairline" />
-            <Button onClick={() => router.push("/projects")} size="sm">
-              <Icon icon={SparklesIcon} size={14} />
-              New project
-            </Button>
-          </>
-        )}
+
         {projectMode && latestRun && (
           <>
             <div className="mx-3 h-5 w-px bg-hairline" />

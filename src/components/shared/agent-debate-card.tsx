@@ -43,8 +43,8 @@ export function AgentDebateCard({ decision }: AgentDebateCardProps) {
               transition={{ duration: 0.2, delay: i * 0.05 }}
               className="flex gap-3"
             >
-              <div className="mt-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-[9px]"
-                style={{ backgroundColor: `${agent.color}22`, color: agent.color }}>
+              <div className="mt-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-white"
+                style={{ background: agent.color }}>
                 <Icon icon={agent.icon} size={14} />
               </div>
               <div className="min-w-0 flex-1 text-sm leading-relaxed text-text-secondary">

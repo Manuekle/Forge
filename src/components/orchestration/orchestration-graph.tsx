@@ -1,29 +1,44 @@
 "use client"
 
 import { motion, AnimatePresence } from "framer-motion"
-import { Icon } from "@/components/ui/icon"
 import { AGENTS } from "@/lib/constants"
 import { cn } from "@/lib/utils"
-import { ArrowDown01Icon, ArrowTurnBackwardIcon, ChatBotIcon } from "@hugeicons/core-free-icons"
+import {
+  ArrowTurnBackwardIcon,
+  RouteIcon,
+} from "@hugeicons/core-free-icons"
+import { Icon } from "@/components/ui/icon"
 import { type LiveView, type AgentNode, STATE_LABELS, VOTE_COLORS, VOTE_LABELS } from "./derive"
 
-/**
- * Live multi-agent execution graph. Orchestrator on top, planned agents in
- * real execution order below, animated edges while work flows, revision
- * loops rendered inline, skipped agents ghosted with the planner's reason.
- */
+const STATE_ORDER: AgentNode["state"][] = [
+  "waiting",
+  "reading_context",
+  "reasoning",
+  "reviewing",
+  "revising",
+  "voting",
+  "completed",
+]
+
 export function OrchestrationGraph({ view }: { view: LiveView }) {
   const { nodes, skipped, revisionEdges, isLive, strategy, planSource } = view
 
   if (nodes.length === 0 && skipped.length === 0) {
     return (
-      <div className="rounded-2xl bg-surface-inset p-6 text-center text-xs text-muted ring-hair">
-        No orchestration yet — start a run and the execution graph appears here live.
+      <div className="flex flex-col items-center gap-3 rounded-2xl bg-surface-inset px-8 py-12 text-center ring-hair">
+        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-subtle">
+          <Icon icon={RouteIcon} size={20} className="text-brand" />
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-text-primary">No orchestration yet</p>
+          <p className="mt-1 max-w-xs text-xs leading-relaxed text-text-secondary">
+            Start a run &mdash; the execution graph appears here live as agents work.
+          </p>
+        </div>
       </div>
     )
   }
 
-  // Revision loops keyed by target so they render next to the revised node.
   const loopsByTarget = new Map<string, { from: string; reason: string }[]>()
   for (const e of revisionEdges) {
     const list = loopsByTarget.get(e.to) ?? []
@@ -31,57 +46,70 @@ export function OrchestrationGraph({ view }: { view: LiveView }) {
     loopsByTarget.set(e.to, list)
   }
 
+  const activeIndex = nodes.findIndex((n) => n.active)
+
   return (
-    <div className="relative">
+    <div className="relative font-mono text-xs leading-relaxed">
       {strategy && (
-        <p className="mb-4 text-xs leading-relaxed text-text-secondary">
-          <span className="font-medium text-brand">Plan{planSource === "model" ? "" : " (default)"}: </span>
-          {strategy}
-        </p>
+        <div className="mb-4 flex items-start gap-2 rounded-lg bg-brand-subtle px-3 py-2 text-xs leading-relaxed text-text-secondary">
+          <Icon icon={RouteIcon} size={12} className="mt-0.5 flex-shrink-0 text-brand" />
+          <span>
+            <span className="font-medium text-brand">
+              {planSource === "model" ? "Plan" : "Strategy"}
+            </span>
+            : {strategy}
+          </span>
+        </div>
       )}
 
-      <div className="flex flex-col items-stretch">
-        {/* Orchestrator root node */}
-        <OrchestratorNode live={isLive} />
-        <Edge state={nodes.length > 0 ? (nodes[0].state === "waiting" ? "pending" : "done") : "pending"} flowing={isLive && nodes[0]?.active === true} />
+      {/* Orchestrator */}
+      <div className="flex items-center gap-3 py-1.5">
+        <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full gradient-brand text-white shadow-brand">
+          <Icon icon={AGENTS.orchestrator.icon} size={14} />
+        </span>
+        <span className="font-semibold text-text-primary">Orchestrator</span>
+        {isLive ? (
+          <span className="flex items-center gap-1 rounded-full bg-brand-subtle px-2 py-0.5 text-[10px] font-medium text-brand">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-brand" />
+            LIVE
+          </span>
+        ) : (
+          <span className="text-[11px] text-muted">Supervised this run</span>
+        )}
+      </div>
 
+      {/* Agents */}
+      <div className="flex flex-col gap-px">
         {nodes.map((node, i) => {
           const loops = loopsByTarget.get(node.agent) ?? []
-          const next = nodes[i + 1]
+          const isActive = i === activeIndex
           return (
-            <div key={node.agent} className="flex flex-col items-stretch">
+            <div key={node.agent}>
               {loops.map((loop, j) => (
-                <RevisionLoop key={j} from={loop.from} to={node.agent} reason={loop.reason} />
+                <RevisionNote key={j} from={loop.from} to={node.agent} reason={loop.reason} />
               ))}
-              <GraphNode node={node} />
-              {next && (
-                <Edge
-                  state={next.state === "waiting" ? "pending" : "done"}
-                  flowing={isLive && next.active}
-                />
-              )}
+              <AgentRow node={node} isActive={isActive} />
             </div>
           )
         })}
       </div>
 
+      {/* Skipped agents */}
       {skipped.length > 0 && (
-        <div className="mt-5 flex flex-col gap-1.5 pt-4 hairline-t">
+        <div className="mt-3 border-t border-dashed border-hairline pt-3">
           {skipped.map((s) => {
             const agent = AGENTS[s.agent]
             return (
-              <div key={s.agent} className="flex items-start gap-2.5 rounded-2xl px-3 py-2 text-xs opacity-60">
+              <div key={s.agent} className="flex items-center gap-3 py-1.5 opacity-40">
                 <span
-                  className="mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-[8px] ring-1 ring-inset ring-current"
-                  style={{ color: agent?.color ?? "#71717A", backgroundColor: "transparent", borderStyle: "dashed" }}
+                  className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full ring-1 ring-inset ring-muted/40 text-muted"
+                  style={{ backgroundColor: "transparent" }}
                 >
-                  {agent ? <Icon icon={agent.icon} size={12} /> : s.agent.slice(0, 2)}
+                  {agent ? <Icon icon={agent.icon} size={13} /> : s.agent.slice(0, 2).toUpperCase()}
                 </span>
-                <div className="min-w-0">
-                  <span className="font-medium text-text-secondary">{agent?.label ?? s.agent}</span>
-                  <span className="ml-2 rounded-full bg-surface-inset px-2 py-0.5 text-[10px] text-muted ring-hair">skipped</span>
-                  <p className="mt-0.5 text-[11px] leading-relaxed text-muted">{s.reason}</p>
-                </div>
+                <span className="text-text-secondary">{agent?.label ?? s.agent}</span>
+                <span className="rounded bg-surface-inset px-1.5 py-0.5 text-[10px] text-muted ring-hair">skipped</span>
+                <span className="truncate text-[11px] text-muted">{s.reason}</span>
               </div>
             )
           })}
@@ -91,93 +119,124 @@ export function OrchestrationGraph({ view }: { view: LiveView }) {
   )
 }
 
-function OrchestratorNode({ live }: { live: boolean }) {
-  return (
-    <div className="flex items-center gap-3 rounded-2xl bg-surface-2 px-4 py-3 ring-hair lift-1">
-      <span className="relative flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-[10px] gradient-brand">
-        <Icon icon={ChatBotIcon} size={15} className="text-white" />
-        {live && (
-          <span className="absolute inset-0 animate-ping rounded-[10px] bg-brand opacity-30" />
-        )}
-      </span>
-      <div className="min-w-0 flex-1">
-        <div className="text-xs font-semibold text-text-primary" style={{ fontFamily: "var(--font-syne)" }}>
-          Orchestrator
-        </div>
-        <div className="text-[11px] text-muted">
-          {live ? "Coordinating — routing work, watching confidence" : "Planned, routed and supervised this run"}
-        </div>
-      </div>
-      {live && (
-        <span className="flex items-center gap-1.5 rounded-full bg-brand-subtle px-2.5 py-1 text-[10px] font-medium text-brand">
-          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-brand" />
-          LIVE
-        </span>
-      )}
-    </div>
-  )
-}
-
-function GraphNode({ node }: { node: AgentNode }) {
+function AgentRow({
+  node,
+  isActive,
+}: {
+  node: AgentNode
+  isActive: boolean
+}) {
   const agent = AGENTS[node.agent]
   const color = agent?.color ?? "#E85002"
   const working = node.active
   const done = node.state === "completed"
+  const stateIdx = STATE_ORDER.indexOf(node.state)
 
   return (
     <motion.div
-      layout
-      animate={working ? { scale: 1.015 } : { scale: 1 }}
+      initial={{ opacity: 0, x: -6 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ type: "spring", stiffness: 300, damping: 28 }}
       className={cn(
-        "relative flex items-center gap-3 rounded-2xl px-4 py-3 ring-hair transition-colors duration-300",
-        working ? "bg-surface-2 ring-hair-strong" : done ? "bg-surface-2" : "bg-surface-inset"
+        "relative flex items-center gap-3 rounded-xl px-2 py-1.5 transition-all duration-300",
+        working ? "ring-1 ring-inset" : "",
+        !working && !done ? "opacity-70" : ""
       )}
-      style={working ? { boxShadow: `0 0 0 1px ${color}55, 0 0 24px ${color}22` } : undefined}
+      style={
+        working
+          ? {
+              boxShadow: `0 0 0 1px ${color}33, 0 0 20px ${color}12`,
+            }
+          : done
+            ? { backgroundColor: `${color}06` }
+            : {}
+      }
     >
+      {/* Agent icon — solid circle matching /agents style */}
       <span
-        className="relative flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-[10px]"
-        style={{ backgroundColor: `${color}22`, color }}
+        className="relative z-10 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-white"
+        style={{ backgroundColor: color }}
       >
-        {agent ? <Icon icon={agent.icon} size={14} /> : node.agent.slice(0, 2).toUpperCase()}
+        {agent ? <Icon icon={agent.icon} size={13} /> : node.agent.slice(0, 2).toUpperCase()}
         {working && (
-          <svg className="absolute -inset-1 animate-spin" style={{ animationDuration: "1.6s" }} viewBox="0 0 40 40" fill="none">
-            <circle cx="20" cy="20" r="18" stroke={color} strokeOpacity="0.2" strokeWidth="2" />
-            <path d="M20 2 a18 18 0 0 1 12.7 5.3" stroke={color} strokeWidth="2" strokeLinecap="round" />
+          <svg className="absolute -inset-1 animate-spin" style={{ animationDuration: "1.2s" }} viewBox="0 0 40 40" fill="none">
+            <path d="M20 2 a18 18 0 0 1 12.7 5.3" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" />
           </svg>
         )}
       </span>
 
-      <div className="min-w-0 flex-1">
-        <div className={cn("flex items-center gap-2 text-xs font-medium", done || working ? "text-text-primary" : "text-text-secondary")}>
-          {agent?.label ?? node.agent}
-          {node.round > 1 && (
-            <span className="rounded-full bg-brand-subtle px-2 py-0.5 font-mono text-[10px] text-brand">round {node.round}</span>
-          )}
-        </div>
-        <div className="mt-0.5 flex items-center gap-1.5 text-[11px]">
-          <StateDot state={node.state} color={color} />
-          <span className={working ? "font-medium" : "text-muted"} style={working ? { color } : undefined}>
-            {STATE_LABELS[node.state]}
-            {working && <AnimatedEllipsis />}
-          </span>
-        </div>
-        {node.reason && !done && !working && (
-          <p className="mt-0.5 truncate text-[10px] text-muted" title={node.reason}>{node.reason}</p>
+      {/* Agent name */}
+      <span
+        className={cn(
+          "min-w-0 truncate text-[13px] font-medium",
+          done || working ? "text-text-primary" : "text-text-secondary"
         )}
+      >
+        {agent?.label ?? node.agent}
+      </span>
+
+      {/* Round badge */}
+      {node.round > 1 && (
+        <span className="flex-shrink-0 rounded bg-brand-subtle px-1.5 py-0.5 font-mono text-[10px] font-medium text-brand ring-1 ring-inset ring-brand/20">
+          R{node.round}
+        </span>
+      )}
+
+      {/* State rail */}
+      <div className="ml-auto flex items-center gap-[3px]">
+        {STATE_ORDER.map((s, si) => {
+          const filled = si <= stateIdx
+          return (
+            <span
+              key={s}
+              className="h-[5px] w-[5px] rounded-full transition-all duration-500"
+              style={{
+                backgroundColor: filled
+                  ? s === "completed"
+                    ? "var(--color-success)"
+                    : color
+                  : "var(--color-muted)",
+                opacity: filled ? 1 : 0.2,
+                boxShadow:
+                  si === stateIdx && working
+                    ? `0 0 5px ${color}aa`
+                    : undefined,
+                animation:
+                  si === stateIdx && working
+                    ? "pulse 1s ease-in-out infinite"
+                    : undefined,
+              }}
+              title={STATE_LABELS[s]}
+            />
+          )
+        })}
       </div>
 
+      {/* State label */}
+      <span
+        className={cn(
+          "flex-shrink-0 text-[11px] tabular-nums",
+          working ? "font-medium" : "text-muted",
+          done && "text-success"
+        )}
+        style={working ? { color } : undefined}
+      >
+        {STATE_LABELS[node.state]}
+        {working && <AnimatedDots />}
+      </span>
+
+      {/* Vote badge */}
       <AnimatePresence>
         {node.vote && node.vote.vote !== "abstain" && done && (
           <motion.span
-            initial={{ opacity: 0, scale: 0.8 }}
+            initial={{ opacity: 0, scale: 0.85 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="flex flex-shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-medium ring-hair"
+            exit={{ opacity: 0, scale: 0.85 }}
+            className="flex flex-shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ring-hair"
             style={{ color: VOTE_COLORS[node.vote.vote], backgroundColor: `${VOTE_COLORS[node.vote.vote]}14` }}
           >
+            <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: VOTE_COLORS[node.vote.vote] }} />
             {VOTE_LABELS[node.vote.vote]}
-            {node.vote.confidence !== null && (
-              <span className="font-mono opacity-80">{node.vote.confidence.toFixed(2)}</span>
-            )}
           </motion.span>
         )}
       </AnimatePresence>
@@ -185,24 +244,9 @@ function GraphNode({ node }: { node: AgentNode }) {
   )
 }
 
-function StateDot({ state, color }: { state: string; color: string }) {
-  if (state === "completed") {
-    return <span className="h-1.5 w-1.5 rounded-full bg-success" />
-  }
-  if (state === "waiting") {
-    return <span className="h-1.5 w-1.5 rounded-full bg-muted/50" />
-  }
+function AnimatedDots() {
   return (
-    <span className="relative flex h-1.5 w-1.5">
-      <span className="absolute h-full w-full animate-ping rounded-full opacity-60" style={{ backgroundColor: color }} />
-      <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: color }} />
-    </span>
-  )
-}
-
-function AnimatedEllipsis() {
-  return (
-    <span className="inline-flex w-4">
+    <span className="inline-flex w-3">
       {[0, 1, 2].map((i) => (
         <motion.span
           key={i}
@@ -216,46 +260,33 @@ function AnimatedEllipsis() {
   )
 }
 
-/** Vertical connector between nodes. Animated traveling dot while work flows. */
-function Edge({ state, flowing }: { state: "pending" | "done"; flowing: boolean }) {
-  return (
-    <div className="relative mx-auto flex h-7 w-8 items-center justify-center">
-      <span
-        className={cn(
-          "absolute left-1/2 top-0 h-full w-px -translate-x-1/2",
-          state === "done" ? "bg-brand/40" : "border-l border-dashed border-hairline"
-        )}
-      />
-      {flowing ? (
-        <motion.span
-          className="absolute left-1/2 top-0 h-1.5 w-1.5 -translate-x-1/2 rounded-full bg-brand shadow-[0_0_8px_rgba(232,80,2,0.8)]"
-          animate={{ y: [0, 22], opacity: [0, 1, 0] }}
-          transition={{ duration: 1, repeat: Infinity, ease: "easeInOut" }}
-        />
-      ) : (
-        state === "done" && <Icon icon={ArrowDown01Icon} size={11} className="relative z-10 bg-surface text-brand/70" />
-      )}
-    </div>
-  )
-}
-
-/** Inline revision-loop marker: critique sent back to an earlier agent. */
-function RevisionLoop({ from, to, reason }: { from: string; to: string; reason: string }) {
+function RevisionNote({
+  from,
+  to,
+  reason,
+}: {
+  from: string
+  to: string
+  reason: string
+}) {
   const fromAgent = AGENTS[from]
   const toAgent = AGENTS[to]
   return (
     <motion.div
-      initial={{ opacity: 0, x: 12 }}
+      initial={{ opacity: 0, x: -6 }}
       animate={{ opacity: 1, x: 0 }}
-      className="mb-1.5 ml-6 flex items-start gap-2 rounded-xl border border-dashed border-brand/40 bg-brand-subtle px-3 py-2"
+      className="flex items-start gap-2 py-1 pl-9 text-[11px] leading-relaxed text-text-secondary"
     >
-      <Icon icon={ArrowTurnBackwardIcon} size={12} className="mt-0.5 flex-shrink-0 text-brand" />
-      <div className="min-w-0 text-[11px] leading-relaxed">
+      <span className="mt-0.5 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full bg-brand/15">
+        <Icon icon={ArrowTurnBackwardIcon} size={9} className="text-brand" />
+      </span>
+      <span>
         <span className="font-medium text-brand">
-          {fromAgent?.label ?? from} → {toAgent?.label ?? to} · revision requested
+          {fromAgent?.label ?? from} &rarr; {toAgent?.label ?? to}
         </span>
-        <p className="mt-0.5 line-clamp-2 text-text-secondary" title={reason}>{reason}</p>
-      </div>
+        <span className="text-muted"> requested revision</span>
+        <p className="line-clamp-1 text-muted">{reason}</p>
+      </span>
     </motion.div>
   )
 }
