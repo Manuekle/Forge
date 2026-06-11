@@ -341,7 +341,7 @@ function ProjectPageInner({ projectId }: { projectId: string }) {
                           "whitespace-nowrap rounded-full px-4 py-1.5 text-sm transition-all duration-200",
                           active
                             ? "bg-surface-2 font-medium text-text-primary lift-1"
-                            : "text-text-secondary hover:bg-white/[0.04] hover:text-text-primary"
+                            : "text-text-secondary hover:bg-hover hover:text-text-primary"
                         )}
                       >
                         {t}
@@ -473,7 +473,7 @@ function ProjectPageInner({ projectId }: { projectId: string }) {
                           {run.trace.length > 0 ? (
                             <div className="flex flex-col gap-1">
                               {run.trace.map((t, i) => (
-                                <div key={i} className="relative -ml-px flex gap-4 border-l border-white/[0.08] py-1 pl-4">
+                                <div key={i} className="relative -ml-px flex gap-4 border-l border-hairline py-1 pl-4">
                                   <div className="absolute left-[-3.5px] top-2 h-[6px] w-[6px] rounded-full"
                                     style={{ backgroundColor: t.action.includes("Consensus") ? "#E85002" : "rgba(255,255,255,0.15)" }} />
                                   <span className="w-[65px] flex-shrink-0 text-brand">{t.time}</span>
@@ -526,7 +526,7 @@ function ProjectPageInner({ projectId }: { projectId: string }) {
               const agent = AGENTS[agentKey]
               return (
                 <div key={agentKey}
-                  className="flex items-center gap-2.5 rounded-full px-3 py-2 text-xs transition-all duration-200 hover:bg-white/[0.04]"
+                  className="flex items-center gap-2.5 rounded-full px-3 py-2 text-xs transition-all duration-200 hover:bg-hover"
                 >
                   <span className="h-2.5 w-2.5 flex-shrink-0 rounded-full" style={{ backgroundColor: agent.color }} />
                   <span className="text-text-secondary">{agent.label}</span>
@@ -548,7 +548,7 @@ function ProjectPageInner({ projectId }: { projectId: string }) {
                       deliverableTypes.find((t) => t.toLowerCase() === a.type.toLowerCase()) ?? a.type
                     )
                   }}
-                  className="flex items-center gap-2.5 rounded-full px-3 py-2 text-left text-xs text-text-secondary transition-all duration-200 hover:bg-white/[0.04] hover:text-text-primary"
+                  className="flex items-center gap-2.5 rounded-full px-3 py-2 text-left text-xs text-text-secondary transition-all duration-200 hover:bg-hover hover:text-text-primary"
                 >
                   <span className="h-1.5 w-1.5 rounded-full bg-brand/60" />
                   <span className="truncate">{a.title}</span>
@@ -566,7 +566,7 @@ function ProjectPageInner({ projectId }: { projectId: string }) {
               .flatMap((d) => d.entries)
               .slice(0, 5)
               .map((e, i) => (
-                <div key={i} className="rounded-r-lg border-l-2 border-white/[0.08] px-3 py-1.5 text-xs text-text-secondary transition-all duration-200 hover:border-brand/40">
+                <div key={i} className="rounded-r-lg border-l-2 border-hairline px-3 py-1.5 text-xs text-text-secondary transition-all duration-200 hover:border-brand/40">
                   <span className="line-clamp-1">{stripMarkdown(e.message).slice(0, 60)}</span>
                   <div className="mt-0.5 text-[10px] text-muted">
                     {e.agent} · {new Date(e.timestamp).toLocaleTimeString()}
@@ -579,7 +579,13 @@ function ProjectPageInner({ projectId }: { projectId: string }) {
           </div>
         </div>
       </div>
-      <ExportModal open={showExport} onOpenChange={setShowExport} />
+      <ExportModal
+        open={showExport}
+        onOpenChange={setShowExport}
+        projectName={project?.name}
+        artifacts={artifacts}
+        decisions={decisions}
+      />
     </Shell>
   )
 }

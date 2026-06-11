@@ -64,7 +64,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
               transition={{ type: "spring", stiffness: 380, damping: 30 }}
               className="pointer-events-auto flex items-start gap-3 rounded-[20px] bg-surface-3 px-4 py-3.5 lift-3"
             >
-              <span className="mt-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-white/[0.06]">
+              <span className="mt-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-hover-strong">
                 {iconFor[t.variant]}
               </span>
               <div className="min-w-0 flex-1 pt-0.5">
@@ -77,7 +77,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                 onClick={() => remove(t.id)}
                 className={cn(
                   "mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-muted",
-                  "transition-colors hover:bg-white/[0.06] hover:text-text-primary"
+                  "transition-colors hover:bg-hover-strong hover:text-text-primary"
                 )}
               >
                 <X size={13} />

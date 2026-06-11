@@ -6,6 +6,10 @@ export async function GET() {
   const authResult = await requireUser()
   if (!authResult.ok) return authResult.response
 
-  const activities = await store.getActivities(authResult.userId)
-  return NextResponse.json(activities)
+  const [runs, activities] = await Promise.all([
+    store.getAllRuns(authResult.userId),
+    store.getActivities(authResult.userId, 20),
+  ])
+
+  return NextResponse.json({ runs, activities })
 }

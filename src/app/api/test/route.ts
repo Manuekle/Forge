@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server"
 import { complete } from "@/lib/foundry-iq"
+import { requireUser } from "@/lib/api-auth"
 
 export async function GET() {
+  // Authenticated only — this endpoint spends real model tokens.
+  const authed = await requireUser()
+  if (!authed.ok) return authed.response
+
   const endpoint = process.env.AZURE_OPENAI_ENDPOINT || process.env.FOUNDRY_IQ_ENDPOINT
   const key = process.env.AZURE_OPENAI_API_KEY || process.env.FOUNDRY_IQ_API_KEY
   const model = process.env.AZURE_OPENAI_DEPLOYMENT || "grok-4-20-reasoning"

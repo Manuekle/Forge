@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import { useTheme } from "next-themes"
 import { motion } from "framer-motion"
 import { signOut } from "next-auth/react"
 import { Shell } from "@/components/layout/shell"
@@ -9,8 +8,9 @@ import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/components/ui/toast"
+import { ThemeToggle } from "@/components/theme-toggle"
 import {
-  Sparkles, Settings as SettingsIcon, User, Building2, Moon, Sun, Key, AlertTriangle
+  Sparkles, Settings as SettingsIcon, User, Building2, Moon, Key, AlertTriangle
 } from "lucide-react"
 
 const LS_PROFILE = "forge-profile"
@@ -24,7 +24,6 @@ function load<T>(key: string, fallback: T): T {
 
 export default function SettingsPage() {
   const { toast } = useToast()
-  const { theme, setTheme } = useTheme()
 
   const [profile, setProfile] = useState(() => load(LS_PROFILE, { name: "Dana Reyes", email: "dana@forge.dev" }))
   const [workspace, setWorkspace] = useState(() => load(LS_WORKSPACE, { name: "Forge Team" }))
@@ -106,22 +105,13 @@ export default function SettingsPage() {
 
             {/* Appearance */}
             <Section delay={2}>
-              <SectionHeader icon={theme === "dark" ? Moon : Sun} title="Appearance" />
+              <SectionHeader icon={Moon} title="Appearance" />
               <div className="flex items-center justify-between">
                 <div>
                   <div className="text-sm font-medium text-text-primary">Theme</div>
                   <div className="mt-0.5 text-xs text-text-secondary">Switch between dark and light mode</div>
                 </div>
-                <button
-                  onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                  className="flex h-9 w-16 items-center rounded-full bg-surface-3 p-1 transition-colors"
-                >
-                  <div
-                    className={`flex h-7 w-7 items-center justify-center rounded-full bg-brand text-white transition-transform ${theme === "light" ? "translate-x-7" : ""}`}
-                  >
-                    {theme === "dark" ? <Moon size={13} /> : <Sun size={13} />}
-                  </div>
-                </button>
+                <ThemeToggle />
               </div>
             </Section>
 
@@ -167,6 +157,8 @@ export default function SettingsPage() {
   )
 }
 
+
+
 function Section({ delay, children }: { delay: number; children: React.ReactNode }) {
   return (
     <motion.div
@@ -181,7 +173,7 @@ function Section({ delay, children }: { delay: number; children: React.ReactNode
   )
 }
 
-function SectionHeader({ icon: Icon, title }: { icon: React.ComponentType<{ size?: number }>; title: string }) {
+function SectionHeader({ icon: Icon, title }: { icon: React.ComponentType<{ size?: number; className?: string }>; title: string }) {
   return (
     <div className="mb-5 flex items-center gap-3">
       <div className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-subtle ring-hair">

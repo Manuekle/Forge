@@ -97,7 +97,7 @@ export default function AgentsPage() {
               </div>
               <div className="hidden gap-1.5 sm:flex">
                 {AGENTS.orchestrator.capabilities.map((c) => (
-                  <span key={c} className="rounded-full bg-white/[0.06] px-3 py-1.5 text-[11px] text-text-secondary ring-hair">
+                  <span key={c} className="rounded-full bg-hover-strong px-3 py-1.5 text-[11px] text-text-secondary ring-hair">
                     {c}
                   </span>
                 ))}
@@ -132,7 +132,7 @@ export default function AgentsPage() {
                     <p className="mt-3 text-xs leading-relaxed text-text-secondary">{agent.description}</p>
                     <div className="mt-4 flex flex-wrap gap-1.5">
                       {agent.capabilities.map((c) => (
-                        <span key={c} className="rounded-full bg-white/[0.05] px-2.5 py-1 text-[10px] text-text-secondary ring-hair">
+                        <span key={c} className="rounded-full bg-hover-strong px-2.5 py-1 text-[10px] text-text-secondary ring-hair">
                           {c}
                         </span>
                       ))}

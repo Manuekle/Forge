@@ -4,6 +4,8 @@ import { useState } from "react"
 import { motion } from "framer-motion"
 import { Modal } from "@/components/ui/modal"
 import { Button } from "@/components/ui/button"
+import { useToast } from "@/components/ui/toast"
+import type { StoredArtifact, StoredDecision } from "@/lib/store"
 import {
   FileText, Check, Download, ExternalLink, Code, BookOpen,
   GitBranch, Layers
@@ -12,43 +14,19 @@ import {
 interface ExportModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  projectName?: string
+  artifacts?: StoredArtifact[]
+  decisions?: StoredDecision[]
 }
 
 const formats = [
   {
-    id: "pdf",
-    label: "PDF",
-    desc: "Formatted document ready to share",
-    icon: FileText,
-    color: "#F97316",
-  },
-  {
     id: "markdown",
     label: "Markdown",
-    desc: "Plain text with formatting",
+    desc: "All artifacts as a single .md document",
     icon: BookOpen,
     color: "#FB923C",
-  },
-  {
-    id: "notion",
-    label: "Notion",
-    desc: "Push directly to a Notion page",
-    icon: ExternalLink,
-    color: "#FCD34D",
-  },
-  {
-    id: "jira",
-    label: "Jira",
-    desc: "Create Jira epic with all stories",
-    icon: GitBranch,
-    color: "#A78BFA",
-  },
-  {
-    id: "github",
-    label: "GitHub",
-    desc: "Generate a repository structure",
-    icon: Code,
-    color: "#4A9FF9",
+    available: true,
   },
   {
     id: "json",
@@ -56,18 +34,97 @@ const formats = [
     desc: "Raw structured export for APIs",
     icon: Layers,
     color: "#2ED47A",
+    available: true,
+  },
+  {
+    id: "pdf",
+    label: "PDF",
+    desc: "Coming soon",
+    icon: FileText,
+    color: "#F97316",
+    available: false,
+  },
+  {
+    id: "notion",
+    label: "Notion",
+    desc: "Coming soon",
+    icon: ExternalLink,
+    color: "#FCD34D",
+    available: false,
+  },
+  {
+    id: "jira",
+    label: "Jira",
+    desc: "Coming soon",
+    icon: GitBranch,
+    color: "#A78BFA",
+    available: false,
+  },
+  {
+    id: "github",
+    label: "GitHub",
+    desc: "Coming soon",
+    icon: Code,
+    color: "#4A9FF9",
+    available: false,
   },
 ]
 
-export function ExportModal({ open, onOpenChange }: ExportModalProps) {
-  const [selected, setSelected] = useState<string | null>(null)
-  const [exporting, setExporting] = useState(false)
+function downloadBlob(filename: string, content: string, mime: string) {
+  const blob = new Blob([content], { type: mime })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement("a")
+  a.href = url
+  a.download = filename
+  a.click()
+  URL.revokeObjectURL(url)
+}
 
-  async function handleExport() {
+function slug(name: string) {
+  return name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "project"
+}
+
+export function ExportModal({ open, onOpenChange, projectName = "Project", artifacts = [], decisions = [] }: ExportModalProps) {
+  const { toast } = useToast()
+  const [selected, setSelected] = useState<string | null>(null)
+
+  // Latest version of each artifact type only.
+  function latestArtifacts(): StoredArtifact[] {
+    const latest = new Map<string, StoredArtifact>()
+    for (const a of artifacts) {
+      if ((latest.get(a.type)?.version ?? 0) < a.version) latest.set(a.type, a)
+    }
+    return [...latest.values()]
+  }
+
+  function handleExport() {
     if (!selected) return
-    setExporting(true)
-    await new Promise((r) => setTimeout(r, 1200))
-    setExporting(false)
+    const docs = latestArtifacts()
+    if (docs.length === 0) {
+      toast({ title: "Nothing to export", description: "Run the agents first to generate deliverables.", variant: "error" })
+      return
+    }
+
+    if (selected === "markdown") {
+      const md = [
+        `# ${projectName}`,
+        "",
+        ...docs.flatMap((a) => [`\n\n---\n\n# ${a.title} (v${a.version})\n`, a.content]),
+      ].join("\n")
+      downloadBlob(`${slug(projectName)}.md`, md, "text/markdown")
+    } else if (selected === "json") {
+      const payload = {
+        project: projectName,
+        exportedAt: new Date().toISOString(),
+        artifacts: docs.map((a) => ({ type: a.type, title: a.title, version: a.version, content: a.content })),
+        decisions: decisions.map((d) => ({
+          topic: d.topic, status: d.status, consensus: d.consensus, confidence: d.confidence, entries: d.entries,
+        })),
+      }
+      downloadBlob(`${slug(projectName)}.json`, JSON.stringify(payload, null, 2), "application/json")
+    }
+
+    toast({ title: "Export ready", description: `Downloaded ${docs.length} artifacts as ${selected === "markdown" ? "Markdown" : "JSON"}.`, variant: "success" })
     setSelected(null)
     onOpenChange(false)
   }
@@ -85,11 +142,14 @@ export function ExportModal({ open, onOpenChange }: ExportModalProps) {
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.05 + i * 0.04 }}
-                onClick={() => setSelected(f.id)}
+                onClick={() => f.available && setSelected(f.id)}
+                disabled={!f.available}
                 className={`relative rounded-2xl p-3.5 text-left transition-all duration-200 ${
                   isSelected
                     ? "glass-brand"
-                    : "bg-surface-2 ring-hair hover:-translate-y-0.5 hover:bg-surface-3 lift-1"
+                    : f.available
+                      ? "bg-surface-2 ring-hair hover:-translate-y-0.5 hover:bg-surface-3 lift-1"
+                      : "bg-surface-2 ring-hair opacity-45 cursor-not-allowed"
                 }`}
               >
                 {isSelected && (
@@ -119,23 +179,10 @@ export function ExportModal({ open, onOpenChange }: ExportModalProps) {
           <Button variant="secondary" size="sm" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button size="sm" disabled={!selected || exporting} onClick={handleExport}>
+          <Button size="sm" disabled={!selected} onClick={handleExport}>
             <span className="flex items-center gap-1.5">
-              {exporting ? (
-                <>
-                  <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                    className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full"
-                  />
-                  Exporting...
-                </>
-              ) : (
-                <>
-                  <Download size={13} />
-                  Export
-                </>
-              )}
+              <Download size={13} />
+              Export
             </span>
           </Button>
         </div>

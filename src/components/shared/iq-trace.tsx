@@ -29,7 +29,7 @@ export function IqTrace({ className }: IqTraceProps) {
         </div>
         <div className="flex flex-col gap-0.5 font-mono text-xs">
           {traces.map((t, i) => (
-            <div key={i} className="relative -ml-px flex gap-4 border-l border-white/[0.08] py-1 pl-4">
+            <div key={i} className="relative -ml-px flex gap-4 border-l border-hairline py-1 pl-4">
               <div className="absolute left-[-3.5px] top-2 h-[6px] w-[6px] rounded-full"
                 style={{ backgroundColor: t.action.includes("consensus") || t.action.includes("complete") ? "#E85002" : "rgba(255,255,255,0.15)" }} />
               <span className="text-brand w-[65px] flex-shrink-0">{t.time}</span>

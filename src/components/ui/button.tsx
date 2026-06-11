@@ -12,9 +12,9 @@ const buttonVariants = cva(
         secondary:
           "bg-surface-2 text-text-primary ring-hair hover:bg-surface-3 hover:text-text-primary lift-1",
         ghost:
-          "text-text-secondary hover:text-text-primary hover:bg-white/[0.06]",
+          "text-text-secondary hover:text-text-primary hover:bg-hover-strong",
         outline:
-          "text-text-secondary ring-hair hover:text-text-primary hover:ring-hair-strong hover:bg-white/[0.03]",
+          "text-text-secondary ring-hair hover:text-text-primary hover:ring-hair-strong hover:bg-hover",
         danger:
           "bg-error/15 text-error ring-hair hover:bg-error/25",
       },

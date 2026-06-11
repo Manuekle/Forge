@@ -11,7 +11,7 @@ interface ProgressProps {
 function Progress({ value, className }: ProgressProps) {
   const pct = Math.min(Math.max(value, 0), 100)
   return (
-    <div className={cn("h-1.5 w-full rounded-full bg-white/[0.06] overflow-hidden", className)}>
+    <div className={cn("h-1.5 w-full rounded-full bg-hover-strong overflow-hidden", className)}>
       <div
         className="h-full rounded-full gradient-brand-soft transition-all duration-700 ease-out"
         style={{

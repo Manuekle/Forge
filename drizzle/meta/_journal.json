@@ -15,6 +15,13 @@
       "when": 1781149808286,
       "tag": "0001_lethal_stellaris",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1781162055390,
+      "tag": "0002_timestamptz",
+      "breakpoints": true
     }
   ]
 }

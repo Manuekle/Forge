@@ -23,7 +23,7 @@ function renderInline(text: string) {
     const step2 = s1.split(/(`[^`]+`)/g)
     for (const s2 of step2) {
       if (s2.startsWith("`") && s2.endsWith("`")) {
-        out.push(<code key={k()} className="rounded bg-white/[0.08] px-1 font-mono text-[11px] text-brand">{s2.slice(1, -1)}</code>)
+        out.push(<code key={k()} className="rounded bg-hover-strong px-1 font-mono text-[11px] text-brand">{s2.slice(1, -1)}</code>)
         continue
       }
 
@@ -108,7 +108,7 @@ export function Markdown({ content }: { content: string }) {
               <table className="w-full border-collapse text-xs">
                 <tbody>
                   {dataRows.map((row, ri) => (
-                    <tr key={ri} className={ri === 0 ? "border-b border-white/[0.08]" : ri % 2 === 0 ? "bg-white/[0.02]" : ""}>
+                    <tr key={ri} className={ri === 0 ? "border-b border-hairline" : ri % 2 === 0 ? "bg-hover" : ""}>
                       {row.map((cell, ci) => (
                         <td key={ci} className="px-4 py-2.5 text-left text-text-secondary">{renderInline(cell)}</td>
                       ))}
@@ -125,7 +125,7 @@ export function Markdown({ content }: { content: string }) {
       // Horizontal rule
       if (/^---+$/.test(trimmed)) {
         i++
-        blocks.push(<div key={idx} className="my-4 border-t border-white/[0.08]" />)
+        blocks.push(<div key={idx} className="my-4 border-t border-hairline" />)
         continue
       }
 

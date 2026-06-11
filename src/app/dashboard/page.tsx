@@ -215,7 +215,7 @@ export default function DashboardPage() {
                           initial={{ opacity: 0, x: -8 }}
                           animate={{ opacity: 1, x: 0 }}
                           transition={{ delay: 0.1 + i * 0.05 }}
-                          className="flex gap-3 rounded-2xl p-3 transition-colors duration-200 hover:bg-white/[0.03]"
+                          className="flex gap-3 rounded-2xl p-3 transition-colors duration-200 hover:bg-hover"
                         >
                           <div className="mt-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-[8px] font-bold"
                             style={{

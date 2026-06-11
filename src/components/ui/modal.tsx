@@ -67,7 +67,7 @@ export function Modal({ open, onOpenChange, title, description, children, classN
                     )}
                   </div>
                   <Dialog.Close asChild>
-                    <button className="w-8 h-8 rounded-full flex items-center justify-center text-muted hover:text-text-primary hover:bg-white/[0.06] transition-all duration-200">
+                    <button className="w-8 h-8 rounded-full flex items-center justify-center text-muted hover:text-text-primary hover:bg-hover-strong transition-all duration-200">
                       <X size={15} />
                     </button>
                   </Dialog.Close>

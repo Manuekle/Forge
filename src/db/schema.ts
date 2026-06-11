@@ -4,11 +4,11 @@ export const users = pgTable("users", {
   id: uuid("id").defaultRandom().primaryKey(),
   name: text("name"),
   email: text("email").unique().notNull(),
-  emailVerified: timestamp("email_verified", { mode: "date" }),
+  emailVerified: timestamp("email_verified", { mode: "date", withTimezone: true }),
   image: text("image"),
   plan: text("plan").default("free").notNull(),
-  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
-  updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
+  createdAt: timestamp("created_at", { mode: "date", withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { mode: "date", withTimezone: true }).defaultNow().notNull(),
 })
 
 export const accounts = pgTable("accounts", {
@@ -33,13 +33,13 @@ export const sessions = pgTable("sessions", {
   userId: uuid("user_id")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
-  expires: timestamp("expires", { mode: "date" }).notNull(),
+  expires: timestamp("expires", { mode: "date", withTimezone: true }).notNull(),
 })
 
 export const verificationTokens = pgTable("verification_tokens", {
   identifier: text("identifier").notNull(),
   token: text("token").notNull(),
-  expires: timestamp("expires", { mode: "date" }).notNull(),
+  expires: timestamp("expires", { mode: "date", withTimezone: true }).notNull(),
 })
 
 export const projects = pgTable("projects", {
@@ -52,8 +52,8 @@ export const projects = pgTable("projects", {
   status: text("status").default("planning").notNull(),
   progress: integer("progress").default(0).notNull(),
   template: text("template"),
-  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
-  updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
+  createdAt: timestamp("created_at", { mode: "date", withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { mode: "date", withTimezone: true }).defaultNow().notNull(),
 })
 
 export const decisions = pgTable("decisions", {
@@ -67,7 +67,7 @@ export const decisions = pgTable("decisions", {
   consensus: text("consensus"),
   entries: jsonb("entries").$type<{ agent: string; message: string; timestamp: string }[]>().default([]).notNull(),
   votes: jsonb("votes").$type<Record<string, string>>().default({}),
-  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  createdAt: timestamp("created_at", { mode: "date", withTimezone: true }).defaultNow().notNull(),
 })
 
 export const artifacts = pgTable("artifacts", {
@@ -79,8 +79,8 @@ export const artifacts = pgTable("artifacts", {
   title: text("title").notNull(),
   version: integer("version").default(1).notNull(),
   content: text("content").notNull(),
-  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
-  updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
+  createdAt: timestamp("created_at", { mode: "date", withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { mode: "date", withTimezone: true }).defaultNow().notNull(),
 })
 
 export const runs = pgTable("runs", {
@@ -96,7 +96,7 @@ export const runs = pgTable("runs", {
     .$type<{ ref: string; id: string; title: string; source: string; score: number; snippet: string }[]>()
     .default([])
     .notNull(),
-  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  createdAt: timestamp("created_at", { mode: "date", withTimezone: true }).defaultNow().notNull(),
 })
 
 export const activities = pgTable("activities", {
@@ -107,5 +107,5 @@ export const activities = pgTable("activities", {
   agent: text("agent").notNull(),
   action: text("action").notNull(),
   project: text("project").notNull(),
-  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  createdAt: timestamp("created_at", { mode: "date", withTimezone: true }).defaultNow().notNull(),
 })

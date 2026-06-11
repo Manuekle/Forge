@@ -81,7 +81,7 @@ export default function SignInPage() {
 
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-white/[0.06]" />
+              <div className="w-full border-t border-hairline" />
             </div>
             <div className="relative flex justify-center text-xs">
               <span className="bg-[var(--glass-strong-bg)] px-2 text-muted">or</span>

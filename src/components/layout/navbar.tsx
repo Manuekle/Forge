@@ -4,6 +4,8 @@ import { Sparkles } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { formatDuration } from "@/lib/utils"
+import { ThemeToggle } from "@/components/theme-toggle"
+import { NotificationCenter } from "@/components/ui/notification-center"
 
 interface NavbarProps {
   breadcrumb?: string
@@ -22,6 +24,9 @@ export function Navbar({ breadcrumb = "Dashboard", projectMode, latestRun }: Nav
         <span className="font-medium text-text-primary">{breadcrumb}</span>
       </div>
       <div className="flex-1" />
+      <NotificationCenter />
+      <ThemeToggle />
+      <div className="ml-1" />
       {!projectMode && (
         <div className="flex items-center gap-2.5">
           <Button onClick={() => router.push("/projects")} size="sm">

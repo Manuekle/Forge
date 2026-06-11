@@ -23,13 +23,27 @@ export async function POST(
   if (!access.ok) return access.response
   const project = access.project
 
-  const run = await store.createRun(id)
-
   const [prevArtifacts, prevDecisions, prevRuns] = await Promise.all([
     store.getArtifacts(id),
     store.getDecisions(id),
     store.getRuns(id),
   ])
+
+  // One orchestration at a time per project — each run costs real model tokens.
+  // Runs older than 15 minutes are treated as crashed and marked failed.
+  const STALE_MS = 15 * 60 * 1000
+  for (const r of prevRuns.filter((r) => r.status === "running")) {
+    if (Date.now() - new Date(r.createdAt).getTime() > STALE_MS) {
+      await store.failRun(r.id, [{ time: "[00:00.01]", action: "run.failed", detail: "Run abandoned (server restarted or timed out)" }])
+    } else {
+      return NextResponse.json({ error: "A run is already in progress for this project" }, { status: 409 })
+    }
+  }
+
+  const run = await store.createRun(id)
+  // Wall-clock start on this process — run.createdAt round-trips through the DB
+  // and must not be trusted for elapsed-time math.
+  const startedAt = Date.now()
 
   const lines: string[] = []
   if (prevDecisions.length > 0) {
@@ -81,7 +95,7 @@ export async function POST(
       await store.createArtifact(id, artifact.type, artifact.title, artifact.content)
     }
 
-    const duration = Math.floor((Date.now() - run.createdAt.getTime()) / 1000)
+    const duration = Math.floor((Date.now() - startedAt) / 1000)
 
     // Persist the real trace + grounded citations from the orchestration.
     await store.completeRun(run.id, duration, result.trace, result.citations)
@@ -109,7 +123,7 @@ export async function POST(
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : String(err)
     const errorTrace = [{ time: "[00:00.01]", action: "run.failed", detail: errorMessage }]
-    await store.completeRun(run.id, 0, errorTrace)
+    await store.failRun(run.id, errorTrace)
     return NextResponse.json(
       { ...run, status: "failed", duration: 0, trace: errorTrace, error: errorMessage },
       { status: 500 }

@@ -174,7 +174,7 @@ export default function LandingPage() {
 
             {/* Hero Debate Card */}
             <motion.div variants={fadeUp} className="mt-6 w-full max-w-[680px] overflow-hidden rounded-[var(--radius-card)] glass">
-              <div className="flex items-center gap-3 bg-white/[0.03] px-5 py-3.5">
+              <div className="flex items-center gap-3 bg-hover px-5 py-3.5">
                 <div className="flex gap-1.5">
                   <div className="h-2.5 w-2.5 rounded-full bg-brand" />
                   <div className="h-2.5 w-2.5 rounded-full bg-white/10" />
@@ -374,7 +374,7 @@ export default function LandingPage() {
                       whileInView={{ opacity: 1, x: 0 }}
                       viewport={{ once: true }}
                       transition={{ delay: i * 0.08 }}
-                      className="relative -ml-px flex gap-4 border-l border-white/[0.08] py-1.5 pl-4 font-mono text-xs"
+                      className="relative -ml-px flex gap-4 border-l border-hairline py-1.5 pl-4 font-mono text-xs"
                     >
                       <div className="absolute left-[-3.5px] top-2 h-[6px] w-[6px] rounded-full"
                         style={{ backgroundColor: i === 5 ? "#E85002" : "rgba(255,255,255,0.15)" }} />

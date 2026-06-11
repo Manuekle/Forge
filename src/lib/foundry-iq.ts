@@ -75,12 +75,24 @@ export async function complete(
   const url = chatUrl()
   const payload = JSON.stringify(body)
   async function send(authHeader: Record<string, string>) {
-    return fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", ...authHeader },
-      body: payload,
-      signal: controller.signal,
-    })
+    // Transient socket/DNS failures ("fetch failed") happen under concurrent
+    // load — retry the network layer up to twice with a short backoff.
+    let lastErr: unknown
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        return await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...authHeader },
+          body: payload,
+          signal: controller.signal,
+        })
+      } catch (err) {
+        lastErr = err
+        if (controller.signal.aborted) throw err
+        await new Promise((r) => setTimeout(r, 2000 * (attempt + 1)))
+      }
+    }
+    throw lastErr
   }
 
   try {
@@ -89,6 +101,13 @@ export async function complete(
     let response = await send({ "api-key": apiKey })
     if (response.status === 401 || response.status === 403) {
       response = await send({ Authorization: `Bearer ${apiKey}` })
+    }
+
+    // Rate limited: respect Retry-After (capped) and retry up to twice.
+    for (let attempt = 0; response.status === 429 && attempt < 2; attempt++) {
+      const retryAfter = Math.min(Number(response.headers.get("retry-after")) || 5, 30)
+      await new Promise((r) => setTimeout(r, retryAfter * 1000))
+      response = await send({ "api-key": apiKey })
     }
 
     if (!response.ok) {
@@ -308,12 +327,19 @@ ${projectMemory ? `\n${projectMemory}` : ""}`
             content: `Analyze the following product idea and provide your expert assessment:\n\n${contextSummary}\n\n${knowledgeBase ? `Retrieved knowledge is provided above. Ground your recommendations in it and cite sources inline with [S#] markers.\n` : ""}`,
           },
         ],
-        { maxTokens: 2048 }
+        // Reasoning models spend part of the budget on hidden thinking tokens;
+        // give them headroom so the visible answer isn't truncated or empty.
+        { maxTokens: 4096 }
       )
       agentResponse =
         result.completion.choices[0]?.message?.content || "No response generated."
-    } catch {
+    } catch (err) {
       agentResponse = getFallbackAgentResponse(agentKey, projectName, projectDescription)
+      trace.push({
+        time: elapsed(),
+        action: "agent.fallback",
+        detail: `${label} · model call failed (${err instanceof Error ? err.message.slice(0, 80) : "error"}) — using canned response`,
+      })
     }
 
     deliberationMessages.push({ role: "assistant", content: agentResponse })
@@ -369,16 +395,21 @@ NEXT_STEPS:
             content: `Here are all six agent analyses:\n\n${decisions.map((d) => `--- ${agentLabels[d.agent]} ---\n${d.entry}`).join("\n\n")}\n\nSynthesize and produce the consensus.`,
           },
         ],
-        { maxTokens: 1024 }
+        { maxTokens: 2048 }
       )
       const raw = consensusResult.completion.choices[0]?.message?.content || ""
       const consensusMatch = raw.match(/CONSENSUS:\s*(.+?)(?:\n|$)/)
       const confidenceMatch = raw.match(/CONFIDENCE:\s*([\d.]+)/)
       consensusText = consensusMatch?.[1] || raw
       confidence = confidenceMatch ? Math.min(1, Math.max(0, parseFloat(confidenceMatch[1]))) : 0.75
-    } catch {
+    } catch (err) {
       consensusText = `${projectName} is viable. The team recommends starting with a focused MVP targeting the core user need.`
       confidence = 0.72
+      trace.push({
+        time: elapsed(),
+        action: "consensus.fallback",
+        detail: `model call failed (${err instanceof Error ? err.message.slice(0, 80) : "error"}) — using canned consensus`,
+      })
     }
   } else {
     consensusText = `${projectName} is viable. The team recommends starting with a focused MVP targeting the core user need.`
@@ -445,48 +476,60 @@ NEXT_STEPS:
     },
   ]
 
-  const artifacts: { type: string; title: string; content: string }[] = []
-
+  // Artifact documents only depend on the deliberation, not on each other —
+  // generate them concurrently in small batches (full fan-out trips Azure 429s).
+  if (onProgress) await onProgress(`Generating ${artifactSpecs.length} deliverables in parallel...`)
   for (const spec of artifactSpecs) {
-    if (onProgress) await onProgress(`Generating ${spec.type}...`)
     trace.push({
       time: elapsed(),
       action: `artifact.generate`,
       detail: spec.type,
     })
+  }
 
-    if (aiAvailable) {
-      try {
-        if (signal?.aborted) throw new Error("aborted")
-        const result = await complete(
-          [
-            {
-              role: "system",
-              content: `You are a senior technical writer generating a polished, production-quality document. Use the team's deliberation context to ground your output in real decisions. If there is a previous version of this document, improve upon it — refine the content, add depth, and address any gaps. Use Mermaid diagram blocks (\`\`\`mermaid) where they clarify architecture, flows, timelines, or relationships.`,
-            },
-            {
-              role: "user",
-              content: `${spec.prompt}\n\n## Project Context\n${contextSummary}\n\n## Team Deliberation\n${deliberationSummary}`,
-            },
-          ],
-          { maxTokens: 4096 }
-        )
-        const content = result.completion.choices[0]?.message?.content || ""
-        artifacts.push({ type: spec.type, title: spec.title, content })
-      } catch {
-        artifacts.push({
-          type: spec.type,
-          title: spec.title,
-          content: getFallbackArtifact(spec.type, projectName, projectDescription),
-        })
+  const ARTIFACT_CONCURRENCY = 3
+  const artifacts: { type: string; title: string; content: string }[] = []
+  for (let i = 0; i < artifactSpecs.length; i += ARTIFACT_CONCURRENCY) {
+    const batch = await Promise.all(
+      artifactSpecs.slice(i, i + ARTIFACT_CONCURRENCY).map(async (spec) => {
+      if (aiAvailable) {
+        try {
+          if (signal?.aborted) throw new Error("aborted")
+          const result = await complete(
+            [
+              {
+                role: "system",
+                content: `You are a senior technical writer generating a polished, production-quality document. Use the team's deliberation context to ground your output in real decisions. If there is a previous version of this document, improve upon it — refine the content, add depth, and address any gaps. Use Mermaid diagram blocks (\`\`\`mermaid) where they clarify architecture, flows, timelines, or relationships.`,
+              },
+              {
+                role: "user",
+                content: `${spec.prompt}\n\n## Project Context\n${contextSummary}\n\n## Team Deliberation\n${deliberationSummary}`,
+              },
+            ],
+            { maxTokens: 6144 }
+          )
+          const content = result.completion.choices[0]?.message?.content
+          if (content) {
+            trace.push({ time: elapsed(), action: "artifact.complete", detail: spec.type })
+            return { type: spec.type, title: spec.title, content }
+          }
+          throw new Error("empty completion")
+        } catch (err) {
+          trace.push({
+            time: elapsed(),
+            action: "artifact.fallback",
+            detail: `${spec.type} · model call failed (${err instanceof Error ? err.message.slice(0, 80) : "error"}) — using template`,
+          })
+        }
       }
-    } else {
-      artifacts.push({
+      return {
         type: spec.type,
         title: spec.title,
         content: getFallbackArtifact(spec.type, projectName, projectDescription),
+      }
       })
-    }
+    )
+    artifacts.push(...batch)
   }
 
   return {

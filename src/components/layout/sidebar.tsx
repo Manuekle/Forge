@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import { signOut } from "next-auth/react"
 import {
-  LayoutDashboard, FolderKanban, Bot, Settings, ArrowLeft, Plus, Sparkles, LogOut
+  LayoutDashboard, FolderKanban, Bot, Settings, ArrowLeft, Plus, Sparkles, LogOut, Menu
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
@@ -98,6 +98,7 @@ export function Sidebar({ projectMode, projectName, projectDescription, projectS
   const pathname = usePathname()
   const router = useRouter()
   const [recentProjects, setRecentProjects] = useState<StoredProject[]>([])
+  const [mobileOpen, setMobileOpen] = useState(false)
 
   useEffect(() => {
     if (!projectMode) {
@@ -119,8 +120,8 @@ export function Sidebar({ projectMode, projectName, projectDescription, projectS
     )
   }
 
-  return (
-    <div className="flex w-[240px] flex-shrink-0 flex-col px-2">
+  const content = (
+    <div className="flex h-full flex-col px-2">
       <Logo />
 
       <div className="flex flex-col gap-0.5 px-1">
@@ -132,15 +133,15 @@ export function Sidebar({ projectMode, projectName, projectDescription, projectS
           return (
             <button
               key={item.href}
-              onClick={() => router.push(item.href)}
+              onClick={() => { router.push(item.href); setMobileOpen(false) }}
               className={cn(
                 "flex items-center gap-3 rounded-full px-3.5 py-2.5 text-left text-sm transition-all duration-200",
                 isActive
                   ? "bg-surface-2 font-medium text-text-primary lift-1"
-                  : "text-text-secondary hover:bg-white/[0.04] hover:text-text-primary"
+                  : "text-text-secondary hover:bg-hover hover:text-text-primary"
               )}
             >
-              <Icon size={17} strokeWidth={isActive ? 2.4 : 1.8} className={isActive ? "text-brand" : ""} />
+              <Icon size={17} strokeWidth={isActive ? 2.4 : 1.8} className={isActive ? "text-brand" : "text-muted"} />
               {item.label}
             </button>
           )
@@ -151,7 +152,7 @@ export function Sidebar({ projectMode, projectName, projectDescription, projectS
         <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted">Projects</span>
         <button
           onClick={() => router.push("/projects")}
-          className="flex h-5 w-5 items-center justify-center rounded-full text-muted transition-all hover:bg-white/[0.06] hover:text-text-primary"
+          className="flex h-5 w-5 items-center justify-center rounded-full text-muted transition-all hover:bg-hover-strong hover:text-text-primary"
         >
           <Plus size={14} />
         </button>
@@ -165,7 +166,7 @@ export function Sidebar({ projectMode, projectName, projectDescription, projectS
               "flex items-center gap-2.5 rounded-full px-3.5 py-2 text-left text-sm transition-all duration-200",
               pathname === `/projects/${p.id}`
                 ? "bg-surface-2 text-text-primary lift-1"
-                : "text-text-secondary hover:bg-white/[0.04] hover:text-text-primary"
+                : "text-text-secondary hover:bg-hover hover:text-text-primary"
             )}
           >
             <span className={cn(
@@ -183,6 +184,33 @@ export function Sidebar({ projectMode, projectName, projectDescription, projectS
       <UserCard />
     </div>
   )
+
+  return (
+    <>
+      {/* Mobile menu button */}
+      <button
+        onClick={() => setMobileOpen(true)}
+        className="fixed left-3 top-3 z-40 flex h-9 w-9 items-center justify-center rounded-full bg-surface-2 lift-1 md:hidden"
+      >
+        <Menu size={17} className="text-text-primary" />
+      </button>
+
+      {/* Mobile overlay */}
+      {mobileOpen && (
+        <div className="fixed inset-0 z-40 flex md:hidden">
+          <div className="flex-1 bg-black/50" onClick={() => setMobileOpen(false)} />
+          <div className="flex w-[240px] flex-shrink-0 flex-col bg-canvas">
+            {content}
+          </div>
+        </div>
+      )}
+
+      {/* Desktop sidebar */}
+      <div className="hidden w-[240px] flex-shrink-0 flex-col md:flex">
+        {content}
+      </div>
+    </>
+  )
 }
 
 const wsAgents: AgentType[] = [
@@ -199,12 +227,13 @@ function ProjectSidebar({
 }) {
   const statusVariant =
     status === "active" ? "active" : status === "in_review" ? "in_review" : status === "archived" ? "archived" : "planning"
+  const [mobileOpen, setMobileOpen] = useState(false)
 
-  return (
-    <div className="flex w-[240px] flex-shrink-0 flex-col px-2">
+  const content = (
+    <div className="flex h-full flex-col px-2">
       <button
-        onClick={onBack}
-        className="mx-1 mb-2 mt-5 flex items-center gap-1.5 self-start rounded-full px-3 py-1.5 text-xs text-muted transition-colors duration-200 hover:bg-white/[0.04] hover:text-text-primary"
+        onClick={() => { onBack(); setMobileOpen(false) }}
+        className="mx-1 mb-2 mt-5 flex items-center gap-1.5 self-start rounded-full px-3 py-1.5 text-xs text-muted transition-colors duration-200 hover:bg-hover hover:text-text-primary"
       >
         <ArrowLeft size={14} />
         <span>Projects</span>
@@ -241,5 +270,32 @@ function ProjectSidebar({
 
       <UserCard />
     </div>
+  )
+
+  return (
+    <>
+      {/* Mobile menu button */}
+      <button
+        onClick={() => setMobileOpen(true)}
+        className="fixed left-3 top-3 z-40 flex h-9 w-9 items-center justify-center rounded-full bg-surface-2 lift-1 md:hidden"
+      >
+        <Menu size={17} className="text-text-primary" />
+      </button>
+
+      {/* Mobile overlay */}
+      {mobileOpen && (
+        <div className="fixed inset-0 z-40 flex md:hidden">
+          <div className="flex-1 bg-black/50" onClick={() => setMobileOpen(false)} />
+          <div className="flex w-[240px] flex-shrink-0 flex-col bg-canvas">
+            {content}
+          </div>
+        </div>
+      )}
+
+      {/* Desktop sidebar */}
+      <div className="hidden w-[240px] flex-shrink-0 flex-col md:flex">
+        {content}
+      </div>
+    </>
   )
 }

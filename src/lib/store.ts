@@ -56,6 +56,8 @@ export type StoredRun = {
   createdAt: Date
 }
 
+export type StoredRunWithProject = StoredRun & { projectName: string }
+
 export type Activity = {
   id: string
   agent: string
@@ -97,10 +99,12 @@ export interface DataStore {
   getArtifacts(projectId: string): Promise<StoredArtifact[]>
   createArtifact(projectId: string, type: string, title: string, content: string): Promise<StoredArtifact>
   getRuns(projectId: string): Promise<StoredRun[]>
+  getAllRuns(userId: string): Promise<StoredRunWithProject[]>
   createRun(projectId: string): Promise<StoredRun>
   updateRunProgress(id: string, progress: string): Promise<void>
   completeRun(id: string, duration: number, trace: StoredRun["trace"], citations?: RunCitation[]): Promise<void>
-  getActivities(limit?: number): Promise<Activity[]>
+  failRun(id: string, trace: StoredRun["trace"]): Promise<void>
+  getActivities(userId: string, limit?: number): Promise<Activity[]>
   getProjectProgress(projectId: string): Promise<number>
   seed(userId: string): Promise<void>
 }
@@ -274,6 +278,17 @@ const memStore: DataStore = {
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
   },
 
+  async getAllRuns(userId) {
+    const owned = new Map(projects.filter((p) => p.userId === userId).map((p) => [p.id, p.name]))
+    return runs
+      .filter((r) => owned.has(r.projectId))
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+      .map((r) => ({
+        ...r,
+        projectName: owned.get(r.projectId) ?? "Unknown",
+      }))
+  },
+
   async createRun(projectId) {
     const run: StoredRun = {
       id: uid(), projectId, status: "running", progress: null, duration: null, trace: [], citations: [], createdAt: new Date(),
@@ -298,8 +313,21 @@ const memStore: DataStore = {
     r.citations = citations
   },
 
-  async getActivities(limit = 10) {
-    return activities.slice(0, limit)
+  async failRun(id, trace) {
+    const r = runs.find((x) => x.id === id)
+    if (!r) return
+    r.status = "failed"
+    r.progress = null
+    r.duration = 0
+    r.trace = trace
+  },
+
+  async getActivities(userId, limit = 10) {
+    const owned = new Set(projects.filter((p) => p.userId === userId).map((p) => p.id))
+    return activities
+      .filter((a) => owned.has(a.projectId))
+      .slice(-limit)
+      .reverse()
   },
 
   async getProjectProgress(projectId) {
@@ -482,6 +510,21 @@ const dbStore: DataStore = {
     return rows.map(mapRun)
   },
 
+  async getAllRuns(userId) {
+    const db = getDb()
+    const rows = await db
+      .select()
+      .from(schema.runs)
+      .innerJoin(schema.projects, eq(schema.runs.projectId, schema.projects.id))
+      .where(eq(schema.projects.userId, userId))
+      .orderBy(desc(schema.runs.createdAt))
+      .limit(50)
+    return rows.map((r) => ({
+      ...mapRun(r.runs),
+      projectName: r.projects.name,
+    }))
+  },
+
   async createRun(projectId) {
     const [row] = await getDb().insert(schema.runs).values({ projectId }).returning()
     return mapRun(row)
@@ -498,19 +541,28 @@ const dbStore: DataStore = {
       .where(eq(schema.runs.id, id))
   },
 
-  async getActivities(limit = 10) {
+  async failRun(id, trace) {
+    await getDb()
+      .update(schema.runs)
+      .set({ status: "failed", progress: null, duration: 0, trace })
+      .where(eq(schema.runs.id, id))
+  },
+
+  async getActivities(userId, limit = 10) {
     const rows = await getDb()
       .select()
       .from(schema.activities)
+      .innerJoin(schema.projects, eq(schema.activities.projectId, schema.projects.id))
+      .where(eq(schema.projects.userId, userId))
       .orderBy(desc(schema.activities.createdAt))
       .limit(limit)
     return rows.map((r) => ({
-      id: r.id,
-      agent: r.agent,
-      action: r.action,
-      project: r.project,
-      projectId: r.projectId,
-      timestamp: ago(r.createdAt),
+      id: r.activities.id,
+      agent: r.activities.agent,
+      action: r.activities.action,
+      project: r.activities.project,
+      projectId: r.activities.projectId,
+      timestamp: ago(r.activities.createdAt),
     }))
   },
 
