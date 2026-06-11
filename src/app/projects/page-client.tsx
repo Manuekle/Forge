@@ -77,8 +77,9 @@ export default function ProjectsPage() {
 
   return (
     <Shell breadcrumb="Projects">
+      <div className="pointer-events-none fixed inset-0 bg-noise" />
       <div className="p-4 sm:p-6 lg:p-8">
-        <div className="mx-auto max-w-[1200px]">
+        <div className="mx-auto max-w-[1280px]">
           <div className="flex items-end justify-between">
             <div>
               <h1 className="text-[28px] font-bold tracking-tight text-text-primary" style={{ fontFamily: "var(--font-syne)" }}>Projects</h1>

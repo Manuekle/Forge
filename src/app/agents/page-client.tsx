@@ -66,8 +66,9 @@ export default function AgentsPage() {
 
   return (
     <Shell breadcrumb="Agents">
+      <div className="pointer-events-none fixed inset-0 bg-noise" />
       <div className="p-4 sm:p-6 lg:p-8">
-        <div className="mx-auto max-w-[1200px]">
+        <div className="mx-auto max-w-[1280px]">
           <div>
             <h1 className="text-[28px] font-bold tracking-tight text-text-primary" style={{ fontFamily: "var(--font-syne)" }}>Agents</h1>
             <p className="mt-1 text-sm text-text-secondary">

@@ -260,6 +260,7 @@ function ProjectPageInner({ projectId }: { projectId: string }) {
   if (loading) {
     return (
       <Shell breadcrumb="Loading…" projectMode projectName="Loading…" projectDescription="Fetching workspace" projectStatus="planning">
+        <div className="pointer-events-none fixed inset-0 bg-noise" />
         <div className="p-4 sm:p-6 lg:p-8">
           <div className="max-w-[820px] space-y-6">
             <Skeleton className="h-2 w-full" />
@@ -278,6 +279,7 @@ function ProjectPageInner({ projectId }: { projectId: string }) {
   if (!project) {
     return (
       <Shell breadcrumb="Not found" projectMode projectName="Error" projectDescription="" projectStatus="archived">
+        <div className="pointer-events-none fixed inset-0 bg-noise" />
         <div className="flex flex-1 items-center justify-center">
           <div className="text-sm text-text-secondary">Project not found.</div>
         </div>
@@ -295,6 +297,7 @@ function ProjectPageInner({ projectId }: { projectId: string }) {
       latestRun={latestRun && latestRun.status === "completed" ? { duration: latestRun.duration ?? 0, id: latestRun.id } : undefined}
       onEditProject={handleStartEdit}
     >
+      <div className="pointer-events-none fixed inset-0 bg-noise" />
       <div className="flex min-h-0 flex-1">
         {/* Main Content */}
         <div className="flex-1 overflow-auto p-4 sm:p-6 lg:p-8">

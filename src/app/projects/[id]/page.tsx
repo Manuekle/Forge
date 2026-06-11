@@ -2,11 +2,11 @@ import type { Metadata } from "next"
 import ProjectPageClient from "./page-client"
 
 export const metadata: Metadata = {
-  title: "Project | Forge",
+  title: "Project",
   description:
-    "AI-powered product simulation — live agent debate, artifacts, and orchestration.",
+    "Project dashboard with AI-driven orchestration, deliverables, and decisions.",
   openGraph: {
-    title: "Project | Forge",
+    title: "Project",
     description: "AI-powered product simulation — live agent debate, artifacts, and orchestration.",
     images: [{ url: "/og-image.png", width: 1200, height: 630, alt: "Forge Project" }],
   },
