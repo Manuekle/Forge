@@ -6,7 +6,7 @@ import { clampText } from "@/lib/guard"
 export async function GET() {
   const authed = await requireUser()
   if (!authed.ok) return authed.response
-  const all = store.getProjects(authed.userId)
+  const all = await store.getProjects(authed.userId)
   return NextResponse.json(all)
 }
 
@@ -23,6 +23,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Name is required" }, { status: 400 })
   }
 
-  const project = store.createProject({ userId: authed.userId, name, description, template })
+  const project = await store.createProject({ userId: authed.userId, name, description, template })
   return NextResponse.json(project, { status: 201 })
 }

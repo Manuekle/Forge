@@ -6,6 +6,6 @@ export async function POST() {
   const authed = await requireUser()
   if (!authed.ok) return authed.response
   // Only wipe the authenticated user's own data — never the whole store.
-  store.clearUser(authed.userId)
+  await store.clearUser(authed.userId)
   return NextResponse.json({ ok: true, message: "Your workspace was cleared" })
 }

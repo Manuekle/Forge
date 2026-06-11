@@ -38,7 +38,7 @@ export async function requireProjectAccess(id: string): Promise<ProjectAuthResul
   if (!userId) {
     return { ok: false, response: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) }
   }
-  const project = store.getProject(id)
+  const project = await store.getProject(id)
   if (!project || project.userId !== userId) {
     return { ok: false, response: NextResponse.json({ error: "Not found" }, { status: 404 }) }
   }

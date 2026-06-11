@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, uuid, integer, jsonb } from "drizzle-orm/pg-core"
+import { pgTable, text, timestamp, uuid, integer, real, jsonb } from "drizzle-orm/pg-core"
 
 export const users = pgTable("users", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -45,9 +45,9 @@ export const verificationTokens = pgTable("verification_tokens", {
 
 export const projects = pgTable("projects", {
   id: uuid("id").defaultRandom().primaryKey(),
-  userId: uuid("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
+  // Keyed by user email — demo auth is JWT-only (Credentials), so there are no
+  // user rows to FK against. Swap to a uuid FK once a DB-backed auth adapter is wired.
+  userId: text("user_id").notNull(),
   name: text("name").notNull(),
   description: text("description"),
   status: text("status").default("planning").notNull(),
@@ -64,7 +64,7 @@ export const decisions = pgTable("decisions", {
     .references(() => projects.id, { onDelete: "cascade" }),
   topic: text("topic").notNull(),
   status: text("status").default("open").notNull(),
-  confidence: integer("confidence"),
+  confidence: real("confidence"),
   consensus: text("consensus"),
   entries: jsonb("entries").$type<{ agent: string; message: string; timestamp: string }[]>().default([]).notNull(),
   votes: jsonb("votes").$type<Record<string, string>>().default({}),
@@ -92,5 +92,20 @@ export const runs = pgTable("runs", {
   status: text("status").default("running").notNull(),
   duration: integer("duration"),
   trace: jsonb("trace").$type<{ time: string; action: string; detail: string }[]>().default([]).notNull(),
+  citations: jsonb("citations")
+    .$type<{ ref: string; id: string; title: string; source: string; score: number; snippet: string }[]>()
+    .default([])
+    .notNull(),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+})
+
+export const activities = pgTable("activities", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  projectId: uuid("project_id")
+    .notNull()
+    .references(() => projects.id, { onDelete: "cascade" }),
+  agent: text("agent").notNull(),
+  action: text("action").notNull(),
+  project: text("project").notNull(),
   createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
 })

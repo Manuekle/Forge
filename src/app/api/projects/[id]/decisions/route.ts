@@ -29,7 +29,7 @@ export async function GET(
   const { id } = await params
   const access = await requireProjectAccess(id)
   if (!access.ok) return access.response
-  const all = store.getDecisions(id)
+  const all = await store.getDecisions(id)
   return NextResponse.json(all)
 }
 
@@ -49,7 +49,7 @@ export async function POST(
   }
 
   const project = access.project
-  const decision = store.createDecision(id, topic)
+  const decision = await store.createDecision(id, topic)
 
   // Trigger agent debate in sequence
   const context = project
@@ -85,7 +85,7 @@ export async function POST(
 
   // Store all entries
   for (const entry of entries) {
-    store.addDecisionEntry(decision.id, entry.agent, entry.message)
+    await store.addDecisionEntry(decision.id, entry.agent, entry.message)
   }
 
   // Generate consensus
@@ -110,12 +110,12 @@ export async function POST(
     const consensus = consensusMatch?.[1]?.trim() || firstLine || "Consensus reached after debate."
     const confidence = confidenceMatch ? Math.min(1, Math.max(0, parseFloat(confidenceMatch[1]))) : 0.7
 
-    store.resolveDecision(decision.id, consensus, confidence)
+    await store.resolveDecision(decision.id, consensus, confidence)
   } catch {
-    store.resolveDecision(decision.id, "Consensus reached after debate.", 0.7)
+    await store.resolveDecision(decision.id, "Consensus reached after debate.", 0.7)
   }
 
-  return NextResponse.json(store.getDecisions(id), { status: 201 })
+  return NextResponse.json(await store.getDecisions(id), { status: 201 })
 }
 
 function getFallbackDebate(agent: string, topic: string): string {

@@ -10,7 +10,7 @@ export async function GET(
   const { id } = await params
   const access = await requireProjectAccess(id)
   if (!access.ok) return access.response
-  const all = store.getRuns(id)
+  const all = await store.getRuns(id)
   return NextResponse.json(all)
 }
 
@@ -23,7 +23,7 @@ export async function POST(
   if (!access.ok) return access.response
   const project = access.project
 
-  const run = store.createRun(id)
+  const run = await store.createRun(id)
 
   try {
     const result = await runAgentOrchestration({
@@ -33,23 +33,23 @@ export async function POST(
     })
 
     // Create a decision from the orchestration
-    const decision = store.createDecision(id, `Product analysis: ${project.name}`)
+    const decision = await store.createDecision(id, `Product analysis: ${project.name}`)
     for (const entry of result.decisions) {
-      store.addDecisionEntry(decision.id, entry.agent, entry.entry)
+      await store.addDecisionEntry(decision.id, entry.agent, entry.entry)
     }
-    store.resolveDecision(decision.id, result.consensus, result.confidence)
+    await store.resolveDecision(decision.id, result.consensus, result.confidence)
 
     // Store artifacts
     for (const artifact of result.artifacts) {
-      store.createArtifact(id, artifact.type, artifact.title, artifact.content)
+      await store.createArtifact(id, artifact.type, artifact.title, artifact.content)
     }
 
     const duration = Math.floor((Date.now() - run.createdAt.getTime()) / 1000)
 
     // Persist the real trace + grounded citations from the orchestration.
-    store.completeRun(run.id, duration, result.trace, result.citations)
-    const progress = store.getProjectProgress(id)
-    store.updateProject(id, {
+    await store.completeRun(run.id, duration, result.trace, result.citations)
+    const progress = await store.getProjectProgress(id)
+    await store.updateProject(id, {
       progress,
       status: progress >= 100 ? "in_review" : "active",
       updatedAt: new Date(),
@@ -72,7 +72,7 @@ export async function POST(
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : String(err)
     const errorTrace = [{ time: "[00:00.01]", action: "run.failed", detail: errorMessage }]
-    store.completeRun(run.id, 0, errorTrace)
+    await store.completeRun(run.id, 0, errorTrace)
     return NextResponse.json(
       { ...run, status: "failed", duration: 0, trace: errorTrace, error: errorMessage },
       { status: 500 }

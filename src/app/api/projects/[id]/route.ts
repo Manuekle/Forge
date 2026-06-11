@@ -31,7 +31,7 @@ export async function PATCH(
   if (body.status !== undefined && ALLOWED_STATUS.has(body.status)) patch.status = body.status
   if (typeof body.progress === "number") patch.progress = Math.min(100, Math.max(0, body.progress))
 
-  const updated = store.updateProject(id, patch)
+  const updated = await store.updateProject(id, patch)
   return NextResponse.json(updated)
 }
 
@@ -42,6 +42,6 @@ export async function DELETE(
   const { id } = await params
   const access = await requireProjectAccess(id)
   if (!access.ok) return access.response
-  store.deleteProject(id)
+  await store.deleteProject(id)
   return NextResponse.json({ success: true })
 }

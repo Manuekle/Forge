@@ -26,23 +26,23 @@ export async function createProject(formData: FormData) {
 
   if (!name) throw new Error("Name is required")
 
-  const project = store.createProject({ userId, name, description, template: template || undefined })
+  const project = await store.createProject({ userId, name, description, template: template || undefined })
   revalidatePath("/projects")
   return project
 }
 
 export async function getProject(id: string) {
   const userId = await requireUserId()
-  const project = store.getProject(id)
+  const project = await store.getProject(id)
   if (!project || project.userId !== userId) return null
   return project
 }
 
 export async function deleteProject(id: string) {
   const userId = await requireUserId()
-  const project = store.getProject(id)
+  const project = await store.getProject(id)
   if (!project || project.userId !== userId) throw new Error("Not found")
 
-  store.deleteProject(id)
+  await store.deleteProject(id)
   revalidatePath("/projects")
 }

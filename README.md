@@ -21,7 +21,8 @@ Open [http://localhost:3000](http://localhost:3000). Login with any email + pass
 ### Prerequisites
 
 - Node.js 20+ (LTS)
-- PostgreSQL (for backend features)
+- PostgreSQL — **optional**, only for durable persistence (`STORE_DRIVER=postgres`).
+  The default demo runs fully in memory with no database.
 
 ---
 
@@ -209,6 +210,37 @@ MICROSOFT_TENANT_ID=""
   markers are neutralized before reaching a model (`src/lib/guard.ts`).
 - **Grounding** — agent claims are grounded in retrieved, cited sources to reduce
   hallucination (`src/lib/knowledge.ts`).
+
+---
+
+## Persistence
+
+The data layer (`src/lib/store.ts`) exposes one async `DataStore` interface with two
+interchangeable backends, selected by `STORE_DRIVER`:
+
+| `STORE_DRIVER` | Backend | Use |
+|----------------|---------|-----|
+| `memory` (default) | In-memory (persisted on `globalThis`) | Zero-config demo, no database |
+| `postgres` | Drizzle ORM + PostgreSQL | Durable persistence across restarts / serverless |
+
+### Enabling Postgres
+
+```bash
+# 1. Point STORE_DRIVER + DATABASE_URL at your database in .env
+STORE_DRIVER="postgres"
+DATABASE_URL="postgres://user:pass@host:5432/forge"
+
+# 2. Apply the schema
+npm run db:migrate        # or: npm run db:push   (dev)
+
+# 3. Start the app — all reads/writes now hit Postgres
+npm run dev
+```
+
+Schema lives in `src/db/schema.ts`; generated SQL migrations in `drizzle/`.
+Scripts: `db:generate` (new migration), `db:migrate` (apply), `db:push` (dev sync),
+`db:studio` (browse). App-data tables are keyed by user email to match the JWT
+Credentials demo; swap `projects.userId` to a uuid FK once a DB auth adapter is wired.
 
 ---
 

@@ -10,7 +10,7 @@ export async function GET(
   const { id } = await params
   const access = await requireProjectAccess(id)
   if (!access.ok) return access.response
-  const all = store.getArtifacts(id)
+  const all = await store.getArtifacts(id)
   return NextResponse.json(all)
 }
 
@@ -31,6 +31,6 @@ export async function POST(
     return NextResponse.json({ error: "Type and title are required" }, { status: 400 })
   }
 
-  const artifact = store.createArtifact(id, type, title, content)
+  const artifact = await store.createArtifact(id, type, title, content)
   return NextResponse.json(artifact, { status: 201 })
 }
