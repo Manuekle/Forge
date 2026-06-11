@@ -52,6 +52,58 @@
   --radius-xl2: 32px;
 }
 
+/* ── Light mode overrides ── */
+html.light {
+  --color-canvas: #F5F5F0;
+  --color-bg: #F5F5F0;
+  --color-surface: #FFFFFF;
+  --color-surface-2: #F0EFEB;
+  --color-surface-3: #E8E7E2;
+  --color-surface-inset: #EAE9E4;
+  --color-hairline: rgba(0, 0, 0, 0.08);
+  --color-hairline-strong: rgba(0, 0, 0, 0.14);
+  --color-border: rgba(0, 0, 0, 0.09);
+  --color-border-hover: rgba(0, 0, 0, 0.14);
+  --color-text-primary: #1A1A1A;
+  --color-text-secondary: #52525B;
+  --color-muted: #71717A;
+  --color-faint: #A1A1AA;
+  --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.06), 0 4px 12px rgba(0, 0, 0, 0.04);
+  --shadow-raised: 0 2px 4px rgba(0, 0, 0, 0.06), 0 10px 28px rgba(0, 0, 0, 0.05);
+  --shadow-float: 0 6px 14px rgba(0, 0, 0, 0.06), 0 18px 44px rgba(0, 0, 0, 0.06);
+  --shadow-pop: 0 12px 28px rgba(0, 0, 0, 0.08), 0 36px 72px rgba(0, 0, 0, 0.08);
+}
+html.light .lift-1 { box-shadow: var(--shadow-soft), inset 0 1px 0 0 rgba(255, 255, 255, 0.8); }
+html.light .lift-2 { box-shadow: var(--shadow-raised), inset 0 1px 0 0 rgba(255, 255, 255, 0.8); }
+html.light .lift-3 { box-shadow: var(--shadow-float), inset 0 1px 0 0 rgba(255, 255, 255, 0.9); }
+html.light .lift-modal { box-shadow: var(--shadow-pop), inset 0 1px 0 0 rgba(255, 255, 255, 0.9); }
+html.light .hairline-t { box-shadow: inset 0 1px 0 0 rgba(0, 0, 0, 0.06); }
+html.light .ring-hair { box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.07); }
+html.light .ring-hair-strong { box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.11); }
+html.light .glass {
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: var(--shadow-float), inset 0 1px 0 0 rgba(255, 255, 255, 0.9), inset 0 0 0 1px rgba(0, 0, 0, 0.05);
+}
+html.light .glass-strong {
+  background: rgba(255, 255, 255, 0.85);
+  box-shadow: var(--shadow-pop), inset 0 1px 0 0 rgba(255, 255, 255, 0.95), inset 0 0 0 1px rgba(0, 0, 0, 0.06);
+}
+html.light .glass-brand {
+  background: linear-gradient(135deg, rgba(232, 80, 2, 0.08) 0%, rgba(232, 80, 2, 0.02) 100%);
+  box-shadow: 0 8px 28px -6px rgba(232, 80, 2, 0.12), inset 0 1px 0 0 rgba(255, 255, 255, 0.9);
+}
+html.light .gradient-text {
+  background: linear-gradient(135deg, #1A1A1A 0%, #E85002 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+html.light ::selection { background: rgba(232, 80, 2, 0.2); color: #1A1A1A; }
+html.light :focus-visible { box-shadow: 0 0 0 2px var(--color-canvas), 0 0 0 4px rgba(232, 80, 2, 0.45); }
+html.light ::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.12); }
+html.light ::-webkit-scrollbar-thumb:hover { background: rgba(0, 0, 0, 0.2); }
+html.light .skeleton { background: var(--color-surface-3); }
+html.light .skeleton::after { background: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.04), transparent); }
+
 @layer base {
   * { box-sizing: border-box; }
   html { scroll-behavior: smooth; }

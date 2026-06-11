@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-
+import { useTheme } from "next-themes"
 import { motion } from "framer-motion"
 import { signOut } from "next-auth/react"
 import { Shell } from "@/components/layout/shell"
@@ -12,20 +12,6 @@ import { useToast } from "@/components/ui/toast"
 import {
   Sparkles, Settings as SettingsIcon, User, Building2, Moon, Sun, Key, AlertTriangle
 } from "lucide-react"
-
-function useTheme() {
-  const [theme, setTheme] = useState<"dark" | "light">(() => {
-    if (typeof window !== "undefined") return (localStorage.getItem("forge-theme") as "dark" | "light") || "dark"
-    return "dark"
-  })
-  function toggle() {
-    const next = theme === "dark" ? "light" : "dark"
-    setTheme(next)
-    localStorage.setItem("forge-theme", next)
-    document.documentElement.classList.toggle("light", next === "light")
-  }
-  return { theme, toggle }
-}
 
 const LS_PROFILE = "forge-profile"
 const LS_WORKSPACE = "forge-workspace"
@@ -38,7 +24,7 @@ function load<T>(key: string, fallback: T): T {
 
 export default function SettingsPage() {
   const { toast } = useToast()
-  const { theme, toggle } = useTheme()
+  const { theme, setTheme } = useTheme()
 
   const [profile, setProfile] = useState(() => load(LS_PROFILE, { name: "Dana Reyes", email: "dana@forge.dev" }))
   const [workspace, setWorkspace] = useState(() => load(LS_WORKSPACE, { name: "Forge Team" }))
@@ -127,7 +113,7 @@ export default function SettingsPage() {
                   <div className="mt-0.5 text-xs text-text-secondary">Switch between dark and light mode</div>
                 </div>
                 <button
-                  onClick={toggle}
+                  onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
                   className="flex h-9 w-16 items-center rounded-full bg-surface-3 p-1 transition-colors"
                 >
                   <div
