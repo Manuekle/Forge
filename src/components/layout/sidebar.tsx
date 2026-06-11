@@ -1,10 +1,10 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { usePathname, useRouter } from "next/navigation"
+import { signOut } from "next-auth/react"
 import {
-  LayoutDashboard, FolderKanban, Bot, Settings, ArrowLeft,
-  Sparkles, Plus, Layers, GitBranch, Scale
+  LayoutDashboard, FolderKanban, Bot, Settings, ArrowLeft, Plus, Sparkles, LogOut
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
@@ -43,18 +43,53 @@ function Logo() {
 }
 
 function UserCard() {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  const router = useRouter()
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener("mousedown", handleClick)
+    return () => document.removeEventListener("mousedown", handleClick)
+  }, [])
+
   return (
-    <div className="m-2 flex items-center gap-3 rounded-2xl bg-surface-2 p-3 lift-1">
-      <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full gradient-brand text-[11px] font-bold text-white">
-        DR
-      </div>
-      <div className="min-w-0">
-        <div className="text-xs font-medium text-text-primary">Dana Reyes</div>
-        <div className="flex items-center gap-1 text-[10px] text-muted">
-          <Sparkles size={10} className="text-brand" />
-          Forge Pro
+    <div ref={ref} className="relative m-2">
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex w-full items-center gap-3 rounded-2xl bg-surface-2 p-3 text-left lift-1 transition-colors hover:bg-surface-3"
+      >
+        <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full gradient-brand text-[11px] font-bold text-white">
+          DR
         </div>
-      </div>
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-xs font-medium text-text-primary">Dana Reyes</div>
+          <div className="flex items-center gap-1 text-[10px] text-muted">
+            <Sparkles size={10} className="text-brand" />
+            Forge Pro
+          </div>
+        </div>
+      </button>
+      {open && (
+        <div className="absolute bottom-full left-0 right-0 mb-1 overflow-hidden rounded-xl bg-surface-2 p-1 shadow-lg ring-hair">
+          <button
+            onClick={() => { router.push("/settings"); setOpen(false) }}
+            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs text-text-secondary transition-colors hover:bg-surface-3 hover:text-text-primary"
+          >
+            <Settings size={14} />
+            Settings
+          </button>
+          <button
+            onClick={() => signOut({ callbackUrl: "/" })}
+            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs text-text-secondary transition-colors hover:bg-error/12 hover:text-error"
+          >
+            <LogOut size={14} />
+            Sign out
+          </button>
+        </div>
+      )}
     </div>
   )
 }
@@ -67,9 +102,9 @@ export function Sidebar({ projectMode, projectName, projectDescription, projectS
   useEffect(() => {
     if (!projectMode) {
       fetch("/api/projects")
-        .then((r) => r.json())
-        .then(setRecentProjects)
-        .catch(() => {})
+        .then((r) => { if (!r.ok) throw new Error(); return r.json() })
+        .then((data) => { if (Array.isArray(data)) setRecentProjects(data) })
+        .catch(() => setRecentProjects([]))
     }
   }, [projectMode])
 
@@ -150,13 +185,6 @@ export function Sidebar({ projectMode, projectName, projectDescription, projectS
   )
 }
 
-const wsNavItems = [
-  { label: "Collaboration", href: "feed", icon: GitBranch },
-  { label: "Deliverables", href: "deliverables", icon: Layers },
-  { label: "Decision history", href: "decisions", icon: Scale },
-  { label: "Foundry IQ", href: "iq", icon: Sparkles },
-]
-
 const wsAgents: AgentType[] = [
   "orchestrator", "pm", "ux", "architect", "qa", "scrum", "business",
 ]
@@ -188,21 +216,6 @@ function ProjectSidebar({
         <div className="mt-2.5">
           <Badge variant={statusVariant} dot />
         </div>
-      </div>
-
-      <div className="flex flex-col gap-0.5 px-1">
-        {wsNavItems.map((item) => {
-          const Icon = item.icon
-          return (
-            <div
-              key={item.href}
-              className="flex cursor-default items-center gap-3 rounded-full px-3.5 py-2.5 text-sm text-text-secondary transition-all duration-200 hover:bg-white/[0.04] hover:text-text-primary"
-            >
-              <Icon size={17} strokeWidth={1.8} />
-              {item.label}
-            </div>
-          )
-        })}
       </div>
 
       <div className="px-4 pb-2 pt-6 text-[11px] font-medium uppercase tracking-[0.08em] text-muted">

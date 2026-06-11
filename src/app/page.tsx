@@ -158,7 +158,7 @@ export default function LandingPage() {
                       whileHover={{ y: -4 }}
                       className="group flex flex-col items-center gap-2"
                     >
-                      <div className="relative flex h-14 w-14 cursor-default items-center justify-center rounded-2xl ring-hair sm:h-16 sm:w-16"
+                      <div className="relative flex h-14 w-14 cursor-default items-center justify-center rounded-full ring-hair sm:h-16 sm:w-16"
                         style={{ background: `linear-gradient(160deg, ${a.color}2E 0%, ${a.color}0D 100%)` }}>
                         <span className="text-xl font-bold sm:text-2xl" style={{ color: a.color }}>{a.short}</span>
                         <span className="absolute -right-1 -top-1 h-3 w-3 rounded-full ring-2 ring-canvas" style={{ backgroundColor: a.color }}>
@@ -299,7 +299,7 @@ export default function LandingPage() {
               {agents.map((a) => (
                 <motion.div key={a.role} variants={fadeUp} whileHover={{ y: -4 }} className="group rounded-[var(--radius-card)] bg-surface-2 p-6 ring-hair lift-1 transition-all duration-300 hover:lift-2">
                   <div className="mb-3 flex items-center gap-4">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl ring-hair transition-transform duration-300 group-hover:scale-105"
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full ring-hair transition-transform duration-300 group-hover:scale-105"
                       style={{ background: `linear-gradient(160deg, ${a.color}2E 0%, ${a.color}0F 100%)` }}>
                       <span className="text-xl font-bold" style={{ color: a.color }}>{a.short}</span>
                     </div>

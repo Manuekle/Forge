@@ -69,7 +69,7 @@ export async function POST(
         },
       ]
 
-      const result = await complete(messages, { maxTokens: 256 })
+      const result = await complete(messages, { maxTokens: 800 })
       const response =
         result.completion.choices[0]?.message?.content || "No response."
       entries.push({ agent: agent.key, message: response, timestamp: new Date().toISOString() })
@@ -101,7 +101,7 @@ export async function POST(
       },
     ]
 
-    const consensusResult = await complete(consensusMessages, { maxTokens: 128 })
+    const consensusResult = await complete(consensusMessages, { maxTokens: 512 })
     const raw = consensusResult.completion.choices[0]?.message?.content || ""
     const consensusMatch = raw.match(/CONSENSUS:\s*(.+?)(?:\n|$)/)
     const confidenceMatch = raw.match(/CONFIDENCE:\s*([\d.]+)/)

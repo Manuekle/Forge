@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Shell } from "@/components/layout/shell"
 import { AgentDebateCard } from "@/components/shared/agent-debate-card"
+import { Markdown, stripMarkdown } from "@/components/ui/markdown"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -13,11 +14,11 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { ExportModal } from "@/components/shared/export-modal"
 import { useToast } from "@/components/ui/toast"
 import { AGENTS } from "@/lib/constants"
-import { cn } from "@/lib/utils"
+import { cn, formatDuration } from "@/lib/utils"
 import type { StoredProject, StoredDecision, StoredArtifact, StoredRun } from "@/lib/store"
 import {
   Sparkles, Layers, Scale, GitBranch, Zap,
-  MessageSquare, Check, Download, Eye, Plus
+  MessageSquare, Check, Download, Plus
 } from "lucide-react"
 
 const tabs = [
@@ -37,17 +38,6 @@ type DecisionData = {
   agentEntries: { agent: string; message: string; timestamp: string }[]
   consensus?: string
   createdAt: string
-}
-
-const AGENT_RUN_ORDER = ["pm", "ux", "architect", "qa", "scrum", "business"]
-const AGENT_LABELS: Record<string, string> = {
-  orchestrator: "Orchestrator",
-  pm: "Product Manager",
-  ux: "UX Agent",
-  architect: "Architect",
-  qa: "QA Agent",
-  scrum: "Scrum Agent",
-  business: "Business Agent",
 }
 
 const wsAgents = ["orchestrator", "pm", "ux", "architect", "qa", "scrum", "business"] as const
@@ -75,22 +65,30 @@ function ProjectPageInner({ projectId }: { projectId: string }) {
   const [running, setRunning] = useState(false)
   const [runProgress, setRunProgress] = useState<string[]>([])
   const [newTopic, setNewTopic] = useState("")
-  const [debatingDecision, setDebatingDecision] = useState(false)
   const [showExport, setShowExport] = useState(false)
+  const [selectedVersion, setSelectedVersion] = useState(1)
 
   function load() {
     Promise.all([
-      fetch(`/api/projects/${projectId}`).then((r) => r.json()),
-      fetch(`/api/projects/${projectId}/decisions`).then((r) => r.json()),
-      fetch(`/api/projects/${projectId}/artifacts`).then((r) => r.json()),
-      fetch(`/api/projects/${projectId}/runs`).then((r) => r.json()),
-    ]).then(([p, d, a, r]) => {
-      setProject(p)
-      setDecisions(d)
-      setArtifacts(a)
-      setRuns(r)
-      setLoading(false)
-    })
+      fetch(`/api/projects/${projectId}`).then((r) => (r.ok ? r.json() : null)),
+      fetch(`/api/projects/${projectId}/decisions`).then((r) => (r.ok ? r.json() : [])),
+      fetch(`/api/projects/${projectId}/artifacts`).then((r) => (r.ok ? r.json() : [])),
+      fetch(`/api/projects/${projectId}/runs`).then((r) => (r.ok ? r.json() : [])),
+    ])
+      .then(([p, d, a, r]) => {
+        // Endpoints can return a non-array error object on 401/404 — coerce.
+        setProject(p && !p.error ? p : null)
+        setDecisions(Array.isArray(d) ? d : [])
+        setArtifacts(Array.isArray(a) ? a : [])
+        setRuns(Array.isArray(r) ? r : [])
+      })
+      .catch(() => {
+        setProject(null)
+        setDecisions([])
+        setArtifacts([])
+        setRuns([])
+      })
+      .finally(() => setLoading(false))
   }
 
   useEffect(() => {
@@ -100,44 +98,51 @@ function ProjectPageInner({ projectId }: { projectId: string }) {
 
   async function handleNewRun() {
     setRunning(true)
-    setRunProgress([])
+    setRunProgress(["Starting agents…"])
 
-    const interval = setInterval(() => {
-      setRunProgress((prev) => {
-        const nextIdx = prev.length
-        if (nextIdx >= AGENT_RUN_ORDER.length + 3) {
-          clearInterval(interval)
-          return prev
-        }
-        if (nextIdx < AGENT_RUN_ORDER.length) {
-          return [...prev, `${AGENT_LABELS[AGENT_RUN_ORDER[nextIdx]]} analyzing...`]
-        }
-        if (nextIdx === AGENT_RUN_ORDER.length) return [...prev, "Synthesizing consensus..."]
-        if (nextIdx === AGENT_RUN_ORDER.length + 1) return [...prev, "Generating deliverables..."]
-        return [...prev, "Finalizing..."]
-      })
-    }, 800)
+    fetch(`/api/projects/${projectId}/runs`, { method: "POST" }).catch(() => {})
 
-    await fetch(`/api/projects/${projectId}/runs`, { method: "POST" })
-    clearInterval(interval)
-    setRunProgress([])
-    load()
-    setRunning(false)
-    toast({ title: "Run complete", description: "Agents reached consensus and generated deliverables.", variant: "success" })
+    const poll = setInterval(async () => {
+      try {
+        const runsRes = await fetch(`/api/projects/${projectId}/runs`)
+        if (!runsRes.ok) return
+        const all: StoredRun[] = await runsRes.json()
+        const latest = all[0]
+        if (!latest) return
+        if (latest.status === "completed") {
+          clearInterval(poll)
+          load()
+          setRunning(false)
+          setRunProgress([])
+          toast({ title: "Run complete", description: "Agents reached consensus and generated deliverables.", variant: "success" })
+          return
+        }
+        if (latest.status === "failed") {
+          clearInterval(poll)
+          setRunning(false)
+          setRunProgress([])
+          toast({ title: "Run failed", description: "Check the Foundry IQ tab for details.", variant: "error" })
+          return
+        }
+        if (latest.progress) {
+          setRunProgress((prev) => prev.includes(latest.progress!) ? prev : [...prev, latest.progress!])
+        }
+      } catch { /* poll silently */ }
+    }, 1000)
   }
 
   async function handleAddDecision() {
-    if (!newTopic || debatingDecision) return
-    setDebatingDecision(true)
-    await fetch(`/api/projects/${projectId}/decisions`, {
+    if (!newTopic) return
+    const topic = newTopic
+    setNewTopic("")
+    fetch(`/api/projects/${projectId}/decisions`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ topic: newTopic }),
+      body: JSON.stringify({ topic }),
+    }).then(() => {
+      load()
+      toast({ title: "Debate started", description: `"${topic}" — the team is weighing in.`, variant: "brand" })
     })
-    setNewTopic("")
-    setDebatingDecision(false)
-    load()
-    toast({ title: "Debate started", description: "The team is weighing in on your topic.", variant: "brand" })
   }
 
   const mappedDecisions: DecisionData[] = decisions.map((d) => ({
@@ -145,7 +150,7 @@ function ProjectPageInner({ projectId }: { projectId: string }) {
     topic: d.topic,
     status: d.status,
     confidence: d.confidence || undefined,
-    agentEntries: d.entries.map((e) => ({
+    agentEntries: (d.entries ?? []).map((e) => ({
       agent: e.agent,
       message: e.message,
       timestamp: e.timestamp,
@@ -154,7 +159,8 @@ function ProjectPageInner({ projectId }: { projectId: string }) {
     createdAt: new Date(d.createdAt).toLocaleDateString(),
   }))
 
-  const currentArtifact = artifacts.find((a) => a.type.toLowerCase() === activeDeliverable.toLowerCase())
+  const allVersions = artifacts.filter((a) => a.type.toLowerCase() === activeDeliverable.toLowerCase())
+  const currentArtifact = allVersions.find((a) => a.version === selectedVersion) ?? allVersions[0] ?? null
   const latestRun = runs[0]
 
   if (loading) {
@@ -203,7 +209,7 @@ function ProjectPageInner({ projectId }: { projectId: string }) {
               <Progress value={project.progress} className="flex-1" />
               <span className="font-mono text-xs text-muted tabular-nums">{project.progress}% complete</span>
               {latestRun?.status === "completed" && latestRun.duration && (
-                <Badge variant="active" dot>Run · {latestRun.duration}s</Badge>
+                <Badge variant="active" dot>Run · {formatDuration(latestRun.duration)}</Badge>
               )}
             </div>
 
@@ -218,13 +224,14 @@ function ProjectPageInner({ projectId }: { projectId: string }) {
                 >
                   <Card variant="elevated" className="p-5">
                     <div className="mb-4 flex items-center gap-2.5">
-                      <span className="relative flex h-2 w-2">
-                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand opacity-60" />
-                        <span className="relative inline-flex h-2 w-2 rounded-full bg-brand" />
+                      <span className="relative flex h-2.5 w-2.5">
+                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand opacity-50" />
+                        <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-brand" />
                       </span>
-                      <span className="text-xs font-medium text-brand">Agent run in progress…</span>
+                      <span className="text-xs font-medium text-brand">Running agents…</span>
+                      <span className="ml-auto text-[10px] text-muted">{runProgress.length} steps</span>
                     </div>
-                    <div className="flex flex-col gap-2.5">
+                    <div className="flex flex-col gap-1.5">
                       {runProgress.map((step, i) => (
                         <motion.div
                           key={i}
@@ -232,10 +239,17 @@ function ProjectPageInner({ projectId }: { projectId: string }) {
                           animate={{ opacity: 1, x: 0 }}
                           className="flex items-center gap-2.5 text-xs"
                         >
-                          <span className="flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full bg-brand/15">
-                            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-brand" />
-                          </span>
-                          <span className="text-text-secondary">{step}</span>
+                          {i < runProgress.length - 1 ? (
+                            <span className="flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full bg-brand/15">
+                              <span className="h-1.5 w-1.5 rounded-full bg-brand" />
+                            </span>
+                          ) : (
+                            <span className="relative flex h-4 w-4 flex-shrink-0 items-center justify-center">
+                              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand opacity-40" />
+                              <span className="relative inline-flex h-3 w-3 rounded-full bg-brand" />
+                            </span>
+                          )}
+                          <span className={i < runProgress.length - 1 ? "text-text-secondary" : "font-medium text-text-primary"}>{step}</span>
                         </motion.div>
                       ))}
                     </div>
@@ -277,15 +291,21 @@ function ProjectPageInner({ projectId }: { projectId: string }) {
               <motion.div key="feed" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.18 }}>
                 <div className="flex flex-col gap-4">
                   <div className="flex gap-2">
-                    <Input
-                      placeholder="Add a decision topic for debate…"
-                      value={newTopic}
-                      onChange={(e) => setNewTopic(e.target.value)}
-                      onKeyDown={(e) => e.key === "Enter" && handleAddDecision()}
-                      icon={<Plus size={16} />}
-                    />
-                    <Button onClick={handleAddDecision} disabled={!newTopic || debatingDecision}>
-                      {debatingDecision ? "Debating…" : "Add"}
+                    <div className="flex-1">
+                      <Input
+                        placeholder="Add a decision topic for debate…"
+                        value={newTopic}
+                        onChange={(e) => setNewTopic(e.target.value)}
+                        onKeyDown={(e) => e.key === "Enter" && handleAddDecision()}
+                        icon={<Plus size={16} />}
+                      />
+                    </div>
+                    <Button onClick={handleAddDecision} disabled={!newTopic}>
+                      Add
+                    </Button>
+                    <Button onClick={handleNewRun} disabled={running}>
+                      <Sparkles size={15} />
+                      {running ? "Running…" : "New run"}
                     </Button>
                   </div>
 
@@ -294,15 +314,8 @@ function ProjectPageInner({ projectId }: { projectId: string }) {
                   ))}
 
                   {mappedDecisions.length === 0 && !running && (
-                    <EmptyState icon={MessageSquare} title="No debates yet" desc="Add a topic above or start a run to watch the team deliberate." />
+                    <EmptyState icon={MessageSquare} title="No debates yet" desc="Add a topic or start a run to watch the team deliberate." />
                   )}
-
-                  <div className="mt-2 flex justify-center">
-                    <Button onClick={handleNewRun} disabled={running} size="lg">
-                      <Sparkles size={16} />
-                      {running ? "Running agents…" : "New run"}
-                    </Button>
-                  </div>
                 </div>
               </motion.div>
             )}
@@ -316,7 +329,7 @@ function ProjectPageInner({ projectId }: { projectId: string }) {
                     return (
                       <button
                         key={t}
-                        onClick={() => setActiveDeliverable(t)}
+                        onClick={() => { setActiveDeliverable(t); setSelectedVersion(1) }}
                         className={cn(
                           "whitespace-nowrap rounded-full px-4 py-1.5 text-sm transition-all duration-200",
                           active
@@ -334,13 +347,27 @@ function ProjectPageInner({ projectId }: { projectId: string }) {
                     <div className="flex items-center justify-between px-6 py-4">
                       <div className="flex items-center gap-3">
                         <h2 className="text-sm font-semibold text-text-primary">{currentArtifact.title}</h2>
-                        <Badge variant="neutral">v{currentArtifact.version}</Badge>
+                        {allVersions.length > 1 && (
+                          <div className="flex gap-1">
+                            {allVersions.map((a) => (
+                              <button
+                                key={a.version}
+                                onClick={() => setSelectedVersion(a.version)}
+                                className={cn(
+                                  "rounded-full px-2.5 py-0.5 text-[11px] font-mono transition-all",
+                                  a.version === selectedVersion
+                                    ? "bg-brand text-white"
+                                    : "bg-surface-2 text-text-secondary hover:bg-surface-3"
+                                )}
+                              >
+                                v{a.version}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        {allVersions.length <= 1 && <Badge variant="neutral">v{currentArtifact.version}</Badge>}
                       </div>
                       <div className="flex items-center gap-2">
-                        <Button variant="ghost" size="sm">
-                          <Eye size={14} />
-                          Preview
-                        </Button>
                         <Button size="sm" onClick={() => setShowExport(true)}>
                           <Download size={14} />
                           Export
@@ -348,8 +375,8 @@ function ProjectPageInner({ projectId }: { projectId: string }) {
                       </div>
                     </div>
                     <div className="px-6 pb-6">
-                      <div className="whitespace-pre-wrap rounded-2xl bg-surface-inset p-5 font-mono text-xs leading-relaxed text-text-secondary ring-hair">
-                        {currentArtifact.content}
+                      <div className="rounded-2xl bg-surface-inset p-5 text-xs leading-relaxed text-text-secondary ring-hair">
+                        <Markdown content={currentArtifact.content} />
                       </div>
                     </div>
                   </Card>
@@ -397,9 +424,9 @@ function ProjectPageInner({ projectId }: { projectId: string }) {
                                   }}>
                                   {e.agent === "orchestrator" ? "OR" : e.agent.slice(0, 2).toUpperCase()}
                                 </span>
-                                <div className="text-text-secondary">
+                                <div className="min-w-0 flex-1 text-text-secondary">
                                   <span className="font-medium text-text-primary">{e.agent}: </span>
-                                  {e.message}
+                                  <Markdown content={e.message} />
                                 </div>
                               </div>
                             )
@@ -430,7 +457,7 @@ function ProjectPageInner({ projectId }: { projectId: string }) {
                             <span className={`h-1.5 w-1.5 rounded-full ${run.status === "completed" ? "bg-success" : "bg-warning"}`} />
                             <span className="font-mono text-xs text-brand">#{run.id.slice(0, 6)}</span>
                           </div>
-                          <span className="text-xs text-muted">{run.duration || "?"}s</span>
+                          <span className="text-xs text-muted">{run.duration ? formatDuration(run.duration) : "?"}</span>
                           {run.status === "completed" && run.duration && (
                             <span className="text-xs text-muted">{artifacts.length} artifacts</span>
                           )}
@@ -533,7 +560,7 @@ function ProjectPageInner({ projectId }: { projectId: string }) {
               .slice(0, 5)
               .map((e, i) => (
                 <div key={i} className="rounded-r-lg border-l-2 border-white/[0.08] px-3 py-1.5 text-xs text-text-secondary transition-all duration-200 hover:border-brand/40">
-                  <span className="line-clamp-1">{e.message.slice(0, 60)}</span>
+                  <span className="line-clamp-1">{stripMarkdown(e.message).slice(0, 60)}</span>
                   <div className="mt-0.5 text-[10px] text-muted">
                     {e.agent} · {new Date(e.timestamp).toLocaleTimeString()}
                   </div>

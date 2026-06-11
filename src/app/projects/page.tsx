@@ -36,12 +36,15 @@ export default function ProjectsPage() {
     fetch("/api/projects")
       .then((r) => r.json())
       .then((data) => {
-        setProjects(data.map((proj: StoredProject) => ({
-          ...proj,
-          _ago: Math.floor((Date.now() - new Date(proj.updatedAt).getTime()) / 60000),
-        })))
+        setProjects(
+          (Array.isArray(data) ? data : []).map((proj: StoredProject) => ({
+            ...proj,
+            _ago: Math.floor((Date.now() - new Date(proj.updatedAt).getTime()) / 60000),
+          }))
+        )
         setLoading(false)
       })
+      .catch(() => setLoading(false))
   }
 
   useEffect(() => { reloadProjects() }, [])

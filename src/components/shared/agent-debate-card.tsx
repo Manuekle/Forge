@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion"
 import { Badge } from "@/components/ui/badge"
+import { Markdown } from "@/components/ui/markdown"
 import { AGENTS } from "@/lib/constants"
 import type { Decision } from "@/types"
 
@@ -45,8 +46,8 @@ export function AgentDebateCard({ decision }: AgentDebateCardProps) {
                 style={{ backgroundColor: `${agent.color}22`, color: agent.color }}>
                 {entry.agent === "orchestrator" ? "OR" : entry.agent.slice(0, 2).toUpperCase()}
               </div>
-              <div className="text-sm leading-relaxed text-text-secondary">
-                {entry.message}
+              <div className="min-w-0 flex-1 text-sm leading-relaxed text-text-secondary">
+                <Markdown content={entry.message} />
               </div>
             </motion.div>
           )

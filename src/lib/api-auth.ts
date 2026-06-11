@@ -3,12 +3,12 @@ import { auth } from "@/lib/auth"
 import { store, type StoredProject } from "@/lib/store"
 
 /**
- * Returns the authenticated user's id (keyed by email, matching the store),
+ * Returns the authenticated user's id (UUID from the users table),
  * or null when there is no valid session.
  */
 export async function getUserId(): Promise<string | null> {
   const session = await auth()
-  return session?.user?.email ?? null
+  return session?.user?.id ?? null
 }
 
 type AuthResult =

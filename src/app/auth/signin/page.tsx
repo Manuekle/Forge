@@ -6,12 +6,15 @@ import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Sparkles, Mail, Lock } from "lucide-react"
+import { Sparkles, Mail, Lock, Rocket } from "lucide-react"
+
+const DEMO_EMAIL = "demo@forge.dev"
+const DEMO_PASSWORD = "forge"
 
 export default function SignInPage() {
   const router = useRouter()
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
+  const [email, setEmail] = useState(DEMO_EMAIL)
+  const [password, setPassword] = useState(DEMO_PASSWORD)
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
 
@@ -72,18 +75,42 @@ export default function SignInPage() {
             </motion.p>
           )}
 
-          <p className="rounded-2xl bg-white/[0.04] px-3 py-2.5 text-center text-xs text-muted ring-hair">
-            Demo: any email, password <span className="font-mono text-brand">forge</span>
-          </p>
-
           <Button type="submit" size="lg" className="w-full" disabled={loading}>
-            {loading ? "Signing in…" : (<><Sparkles size={15} />Sign in</>)}
+            {loading ? "Signing in…" : <><Sparkles size={15} /> Sign in</>}
           </Button>
-        </form>
 
-        <p className="mt-6 text-center text-xs text-muted">
-          By signing in you agree to the Terms of Service
-        </p>
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-white/[0.06]" />
+            </div>
+            <div className="relative flex justify-center text-xs">
+              <span className="bg-[var(--glass-strong-bg)] px-2 text-muted">or</span>
+            </div>
+          </div>
+
+          <Button
+            type="button"
+            variant="outline"
+            size="lg"
+            className="w-full"
+            onClick={() => {
+              setEmail(DEMO_EMAIL)
+              setPassword(DEMO_PASSWORD)
+              setLoading(true)
+              setError("")
+              signIn("credentials", { email: DEMO_EMAIL, password: DEMO_PASSWORD, redirect: false }).then((r) => {
+                if (r?.error) setError("Invalid credentials")
+                else { router.push("/dashboard"); router.refresh() }
+              })
+            }}
+          >
+            <Rocket size={15} /> Demo login
+          </Button>
+
+          <p className="text-center text-xs text-muted">
+            <span className="font-mono text-brand">demo@forge.dev</span> / <span className="font-mono text-brand">forge</span>
+          </p>
+        </form>
       </motion.div>
     </div>
   )

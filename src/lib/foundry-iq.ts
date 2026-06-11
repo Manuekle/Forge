@@ -29,46 +29,67 @@ type IqResponse = {
 
 import { retrieveKnowledge, type Citation } from "@/lib/knowledge"
 
-const endpoint = process.env.FOUNDRY_IQ_ENDPOINT || ""
-const apiKey = process.env.FOUNDRY_IQ_API_KEY || ""
-const azureOpenAIEndpoint = process.env.AZURE_OPENAI_ENDPOINT || ""
-const azureApiKey = process.env.AZURE_OPENAI_API_KEY || ""
-const defaultDeployment = process.env.AZURE_OPENAI_DEPLOYMENT || "gpt-4.1-mini"
-// Completion timeout. The previous 3000ms aborted nearly every real generation
-// (1024-1536 tokens) before it returned, forcing the canned fallback. Default
-// to 30s; override with IQ_TIMEOUT_MS.
-const COMPLETION_TIMEOUT_MS = Number(process.env.IQ_TIMEOUT_MS) || 30000
+// Azure AI Foundry endpoint hosting the model deployment. Accepts either the
+// bare resource URL (…/services.ai.azure.com) or one already ending in
+// /openai/v1 — both are normalized to the OpenAI-compatible v1 path.
+const rawEndpoint = process.env.AZURE_OPENAI_ENDPOINT || process.env.FOUNDRY_IQ_ENDPOINT || ""
+const apiKey = process.env.AZURE_OPENAI_API_KEY || process.env.FOUNDRY_IQ_API_KEY || ""
+// Single reasoning model for the whole team (Grok on Azure AI Foundry).
+const defaultDeployment = process.env.AZURE_OPENAI_DEPLOYMENT || "grok-4-20-reasoning"
+// Reasoning models are slow; default to 90s. Override with IQ_TIMEOUT_MS.
+const COMPLETION_TIMEOUT_MS = Number(process.env.IQ_TIMEOUT_MS) || 180000
+
+/** True once an endpoint + key are configured — lets us skip network calls. */
+export const aiConfigured = !!(rawEndpoint && apiKey)
+
+/** OpenAI-compatible v1 chat-completions URL for the Foundry endpoint. */
+function chatUrl(): string {
+  const base = rawEndpoint.replace(/\/+$/, "").replace(/\/openai\/v1$/, "").replace(/\/v1$/, "")
+  return `${base}/openai/v1/chat/completions`
+}
+
+/** Reasoning models reject `temperature` and use `max_completion_tokens`. */
+function isReasoningModel(deployment: string): boolean {
+  return /reason|grok|^o\d/i.test(deployment)
+}
 
 export async function complete(
   messages: IqMessage[],
   options?: { deployment?: string; maxTokens?: number }
 ): Promise<IqResponse> {
   const deployment = options?.deployment || defaultDeployment
+  const maxTokens = options?.maxTokens || 2048
+  const reasoning = isReasoningModel(deployment)
 
-  const apiVersion = "2024-08-01-preview"
-  const base = azureOpenAIEndpoint?.replace(/\/v1$/, "").replace(/\/+$/, "")
-  const url = base
-    ? `${base}/openai/deployments/${deployment}/chat/completions?api-version=${apiVersion}`
-    : `${endpoint}/v1/chat/completions`
+  const body: Record<string, unknown> = { model: deployment, messages }
+  if (reasoning) {
+    body.max_completion_tokens = maxTokens
+  } else {
+    body.max_tokens = maxTokens
+    body.temperature = 0.7
+  }
 
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), COMPLETION_TIMEOUT_MS)
 
-  try {
-    const response = await fetch(url, {
+  const url = chatUrl()
+  const payload = JSON.stringify(body)
+  async function send(authHeader: Record<string, string>) {
+    return fetch(url, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "api-key": azureOpenAIEndpoint ? azureApiKey : apiKey,
-        ...(azureOpenAIEndpoint ? {} : { Authorization: `Bearer ${apiKey}` }),
-      },
-      body: JSON.stringify({
-        messages,
-        max_tokens: options?.maxTokens || 2048,
-        temperature: 0.7,
-      }),
+      headers: { "Content-Type": "application/json", ...authHeader },
+      body: payload,
       signal: controller.signal,
     })
+  }
+
+  try {
+    // Azure OpenAI models authenticate with `api-key`; Foundry model-as-a-service
+    // (e.g. Grok) often wants `Authorization: Bearer`. Try the former, fall back.
+    let response = await send({ "api-key": apiKey })
+    if (response.status === 401 || response.status === 403) {
+      response = await send({ Authorization: `Bearer ${apiKey}` })
+    }
 
     if (!response.ok) {
       const text = await response.text().catch(() => "")
@@ -79,7 +100,7 @@ export async function complete(
 
     const trace: IqTraceEntry[] = [
       { time: "[00:00.01]", action: "iq.intent.parse", detail: `${messages.length} messages` },
-      { time: "[00:00.15]", action: `iq.deploy.${deployment}`, detail: `max_tokens=${options?.maxTokens || 2048}` },
+      { time: "[00:00.15]", action: `iq.deploy.${deployment}`, detail: `max_tokens=${maxTokens}` },
       { time: "[00:00.30]", action: "iq.complete", detail: `tokens=${completion.usage?.total_tokens || "?"}` },
     ]
 
@@ -152,8 +173,10 @@ export async function runAgentOrchestration(
     projectName: string
     projectDescription: string
     template?: string | null
+    projectMemory?: string
   },
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  onProgress?: (step: string) => Promise<void>
 ): Promise<{
   decisions: { agent: string; entry: string; timestamp: string }[]
   consensus: string
@@ -162,12 +185,13 @@ export async function runAgentOrchestration(
   artifacts: { type: string; title: string; content: string }[]
   citations: Citation[]
 }> {
-  const { projectName, projectDescription, template } = args
+  const { projectName, projectDescription, template, projectMemory } = args
   const startTime = Date.now()
 
   const contextSummary = `Project: ${projectName}
 Description: ${projectDescription}
-${template ? `Template: ${template}` : ""}`
+${template ? `Template: ${template}` : ""}
+${projectMemory ? `\n${projectMemory}` : ""}`
 
   const decisions: { agent: string; entry: string; timestamp: string }[] = []
   const trace: { time: string; action: string; detail: string; source?: string }[] = []
@@ -213,24 +237,10 @@ ${template ? `Template: ${template}` : ""}`
     source: citations.map((c) => `[${c.ref}] ${c.title}`).join(", ") || "no sources",
   })
 
-  // Quick connectivity check — bail early if endpoint is unreachable
-  let aiAvailable = true
-  try {
-    const pingController = new AbortController()
-    const pingTimeout = setTimeout(() => pingController.abort(), 2000)
-    const pingUrl = azureOpenAIEndpoint
-      ? `${azureOpenAIEndpoint.replace(/\/v1$/, "").replace(/\/+$/, "")}/openai/deployments/${defaultDeployment}/chat/completions?api-version=2024-08-01-preview`
-      : `${endpoint}/v1/chat/completions`
-    await fetch(pingUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "api-key": azureOpenAIEndpoint ? azureApiKey : apiKey },
-      body: JSON.stringify({ messages: [{ role: "user", content: "ping" }], max_tokens: 1 }),
-      signal: pingController.signal,
-    })
-    clearTimeout(pingTimeout)
-  } catch {
-    aiAvailable = false
-  }
+  // Skip the network entirely when no endpoint/key is configured. A reasoning
+  // model is too slow for a probe ping, so we trust config presence and let each
+  // call fall back individually on error.
+  const aiAvailable = aiConfigured
 
   if (!aiAvailable) {
     for (const agentKey of agents) {
@@ -244,9 +254,12 @@ ${template ? `Template: ${template}` : ""}`
     // Jump to consensus & artifacts below
   }
 
+  if (onProgress) await onProgress("Analyzing project and retrieving knowledge...")
+
   // Phase 1: Run each agent in sequence, passing previous context
   if (aiAvailable) for (const agentKey of agents) {
     const label = agentLabels[agentKey]
+    if (onProgress) await onProgress(`${label} analyzing...`)
     const systemPrompt = AGENT_PROMPTS[agentKey]
     let contextBlock = `## Project Context\n${contextSummary}\n\n`
     if (knowledgeBase) contextBlock += `\n${knowledgeBase}\nWhen a recommendation is supported by a retrieved source, cite it inline using its [S#] marker.\n`
@@ -277,7 +290,7 @@ ${template ? `Template: ${template}` : ""}`
             content: `Analyze the following product idea and provide your expert assessment:\n\n${contextSummary}\n\n${knowledgeBase ? `Retrieved knowledge is provided above. Ground your recommendations in it and cite sources inline with [S#] markers.\n` : ""}`,
           },
         ],
-        { maxTokens: 1024 }
+        { maxTokens: 2048 }
       )
       agentResponse =
         result.completion.choices[0]?.message?.content || "No response generated."
@@ -298,6 +311,8 @@ ${template ? `Template: ${template}` : ""}`
       detail: `${label} · ${agentResponse.split("\n")[0]?.slice(0, 60)}...`,
     })
   }
+
+  if (onProgress) await onProgress("Synthesizing consensus among agents...")
 
   // Phase 2: Generate consensus
   trace.push({
@@ -363,6 +378,8 @@ NEXT_STEPS:
     detail: `confidence ${confidence.toFixed(2)}`,
   })
 
+  if (onProgress) await onProgress("Generating deliverables...")
+
   // Phase 3: Generate deliverables
   trace.push({
     time: elapsed(),
@@ -413,6 +430,7 @@ NEXT_STEPS:
   const artifacts: { type: string; title: string; content: string }[] = []
 
   for (const spec of artifactSpecs) {
+    if (onProgress) await onProgress(`Generating ${spec.type}...`)
     trace.push({
       time: elapsed(),
       action: `artifact.generate`,
@@ -426,14 +444,14 @@ NEXT_STEPS:
           [
             {
               role: "system",
-              content: `You are a senior technical writer generating a polished, production-quality document. Use the team's deliberation context to ground your output in real decisions.`,
+              content: `You are a senior technical writer generating a polished, production-quality document. Use the team's deliberation context to ground your output in real decisions. If there is a previous version of this document, improve upon it — refine the content, add depth, and address any gaps.`,
             },
             {
               role: "user",
               content: `${spec.prompt}\n\n## Project Context\n${contextSummary}\n\n## Team Deliberation\n${deliberationSummary}`,
             },
           ],
-          { maxTokens: 1536 }
+          { maxTokens: 4096 }
         )
         const content = result.completion.choices[0]?.message?.content || ""
         artifacts.push({ type: spec.type, title: spec.title, content })

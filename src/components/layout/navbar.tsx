@@ -1,8 +1,9 @@
 "use client"
 
-import { Search, Sparkles, Download } from "lucide-react"
+import { Sparkles } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
+import { formatDuration } from "@/lib/utils"
 
 interface NavbarProps {
   breadcrumb?: string
@@ -23,13 +24,6 @@ export function Navbar({ breadcrumb = "Dashboard", projectMode, latestRun }: Nav
       <div className="flex-1" />
       {!projectMode && (
         <div className="flex items-center gap-2.5">
-          <button className="group flex items-center gap-2 rounded-full bg-surface-2 px-3.5 py-2 text-xs text-muted ring-hair transition-all duration-200 hover:bg-surface-3 hover:text-text-secondary">
-            <Search size={14} />
-            <span className="hidden sm:inline">Search projects…</span>
-            <span className="ml-1 hidden rounded-md bg-white/[0.06] px-1.5 py-0.5 font-mono text-[10px] text-faint sm:inline">
-              ⌘K
-            </span>
-          </button>
           <Button onClick={() => router.push("/projects")} size="sm">
             <Sparkles size={14} />
             New project
@@ -45,13 +39,9 @@ export function Navbar({ breadcrumb = "Dashboard", projectMode, latestRun }: Nav
                 <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-brand" />
               </span>
               <span className="font-medium text-brand">Run #{latestRun.id.slice(0, 6)}</span>
-              <span className="text-text-secondary">{latestRun.duration}s</span>
+              <span className="text-text-secondary">{formatDuration(latestRun.duration)}</span>
             </div>
           )}
-          <Button size="sm" variant="secondary">
-            <Download size={14} />
-            Export
-          </Button>
         </div>
       )}
     </div>

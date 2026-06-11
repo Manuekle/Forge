@@ -8,9 +8,9 @@ interface AgentBadgeProps {
 }
 
 const sizeMap = {
-  sm: "w-[26px] h-[26px] text-[9px] rounded-[9px]",
-  md: "w-[32px] h-[32px] text-[10px] rounded-[11px]",
-  lg: "w-[38px] h-[38px] text-[12px] rounded-[13px]",
+  sm: "w-[26px] h-[26px] text-[9px]",
+  md: "w-[32px] h-[32px] text-[10px]",
+  lg: "w-[38px] h-[38px] text-[12px]",
 }
 
 const labelMap: Record<string, string> = {
@@ -29,13 +29,12 @@ function AgentBadge({ type, size = "md", className }: AgentBadgeProps) {
   return (
     <div
       className={cn(
-        "flex items-center justify-center font-bold flex-shrink-0",
+        "flex items-center justify-center font-bold flex-shrink-0 rounded-full text-white",
         sizeMap[size],
         className
       )}
       style={{
-        background: agent.bgColor,
-        color: agent.color,
+        background: agent.color,
       }}
     >
       {labelMap[type] || type.slice(0, 2).toUpperCase()}

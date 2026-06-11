@@ -39,7 +39,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className={`${syne.variable} ${interTight.variable} ${jetbrainsMono.variable}`}>
+    <html lang="en" suppressHydrationWarning className={`${syne.variable} ${interTight.variable} ${jetbrainsMono.variable}`}>
       <body suppressHydrationWarning>
         <Providers>{children}</Providers>
       </body>

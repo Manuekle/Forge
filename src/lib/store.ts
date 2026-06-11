@@ -49,6 +49,7 @@ export type StoredRun = {
   id: string
   projectId: string
   status: string
+  progress: string | null
   duration: number | null
   trace: { time: string; action: string; detail: string }[]
   citations: RunCitation[]
@@ -97,6 +98,7 @@ export interface DataStore {
   createArtifact(projectId: string, type: string, title: string, content: string): Promise<StoredArtifact>
   getRuns(projectId: string): Promise<StoredRun[]>
   createRun(projectId: string): Promise<StoredRun>
+  updateRunProgress(id: string, progress: string): Promise<void>
   completeRun(id: string, duration: number, trace: StoredRun["trace"], citations?: RunCitation[]): Promise<void>
   getActivities(limit?: number): Promise<Activity[]>
   getProjectProgress(projectId: string): Promise<number>
@@ -274,16 +276,23 @@ const memStore: DataStore = {
 
   async createRun(projectId) {
     const run: StoredRun = {
-      id: uid(), projectId, status: "running", duration: null, trace: [], citations: [], createdAt: new Date(),
+      id: uid(), projectId, status: "running", progress: null, duration: null, trace: [], citations: [], createdAt: new Date(),
     }
     runs.push(run)
     return run
+  },
+
+  async updateRunProgress(id, progress) {
+    const r = runs.find((x) => x.id === id)
+    if (!r) return
+    r.progress = progress
   },
 
   async completeRun(id, duration, trace, citations = []) {
     const r = runs.find((x) => x.id === id)
     if (!r) return
     r.status = "completed"
+    r.progress = null
     r.duration = duration
     r.trace = trace
     r.citations = citations
@@ -301,7 +310,7 @@ const memStore: DataStore = {
   },
 
   async seed(userId) {
-    if (projects.length > 0) return
+    if (projects.some((p) => p.userId === userId)) return
     await seedDemo(memStore, userId)
   },
 }
@@ -342,6 +351,7 @@ function mapRun(r: typeof schema.runs.$inferSelect): StoredRun {
     id: r.id,
     projectId: r.projectId,
     status: r.status,
+    progress: r.progress ?? null,
     duration: r.duration ?? null,
     trace: r.trace ?? [],
     citations: r.citations ?? [],
@@ -477,10 +487,14 @@ const dbStore: DataStore = {
     return mapRun(row)
   },
 
+  async updateRunProgress(id, progress) {
+    await getDb().update(schema.runs).set({ progress }).where(eq(schema.runs.id, id))
+  },
+
   async completeRun(id, duration, trace, citations = []) {
     await getDb()
       .update(schema.runs)
-      .set({ status: "completed", duration, trace, citations })
+      .set({ status: "completed", progress: null, duration, trace, citations })
       .where(eq(schema.runs.id, id))
   },
 
@@ -518,7 +532,10 @@ const dbStore: DataStore = {
   },
 
   async seed(userId) {
-    const [{ value }] = await getDb().select({ value: sql<number>`count(*)` }).from(schema.projects)
+    const [{ value }] = await getDb()
+      .select({ value: sql<number>`count(*)` })
+      .from(schema.projects)
+      .where(eq(schema.projects.userId, userId))
     if (Number(value) > 0) return
     await seedDemo(dbStore, userId)
   },

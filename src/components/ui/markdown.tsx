@@ -1,0 +1,223 @@
+"use client"
+
+import { useMemo } from "react"
+
+let _key = 0
+function k(): number { return _key++ }
+
+function renderInline(text: string) {
+  const out: React.ReactNode[] = []
+
+  const step1 = text.split(/(\[S\d+\])/g)
+  for (const s1 of step1) {
+    if (/^\[S\d+\]$/.test(s1)) {
+      out.push(
+        <span key={k()} className="inline-flex items-center justify-center rounded-full bg-brand/15 px-1.5 font-mono text-[10px] font-semibold text-brand">
+          {s1.slice(1, -1)}
+        </span>
+      )
+      continue
+    }
+
+    const step2 = s1.split(/(`[^`]+`)/g)
+    for (const s2 of step2) {
+      if (s2.startsWith("`") && s2.endsWith("`")) {
+        out.push(<code key={k()} className="rounded bg-white/[0.08] px-1 font-mono text-[11px] text-brand">{s2.slice(1, -1)}</code>)
+        continue
+      }
+
+      const step3 = s2.split(/(\*\*[^*]+\*\*)/g)
+      for (const s3 of step3) {
+        if (s3.startsWith("**") && s3.endsWith("**")) {
+          out.push(<strong key={k()}>{s3.slice(2, -2)}</strong>)
+          continue
+        }
+
+        const step4 = s3.split(/\*([^*]+)\*/g)
+        for (let j = 0; j < step4.length; j++) {
+          if (j % 2 === 1) {
+            out.push(<em key={k()}>{step4[j]}</em>)
+          } else if (step4[j]) {
+            out.push(step4[j])
+          }
+        }
+      }
+    }
+  }
+
+  return out
+}
+
+export function stripMarkdown(text: string): string {
+  return text
+    .replace(/\*\*([^*]+)\*\*/g, "$1")
+    .replace(/\*([^*]+)\*/g, "$1")
+    .replace(/`([^`]+)`/g, "$1")
+    .replace(/\[S\d+\]/g, "")
+    .replace(/#{2,4}\s+/g, "")
+    .trim()
+}
+
+export function Markdown({ content }: { content: string }) {
+  const rendered = useMemo(() => {
+    const lines = content.split("\n")
+    const blocks: React.ReactNode[] = []
+    let idx = 0
+    let i = 0
+
+    while (i < lines.length) {
+      const trimmed = lines[i].trim()
+      idx++
+
+      // Code block
+      if (trimmed.startsWith("```")) {
+        const lang = trimmed.replace(/^```/, "").trim()
+        const codeLines: string[] = []
+        for (i++; i < lines.length && !lines[i].trim().startsWith("```"); i++) {
+          codeLines.push(lines[i])
+        }
+        i++
+        blocks.push(
+          <div key={idx} className="my-3 overflow-auto rounded-2xl bg-black/30 p-4 font-mono text-[11px] leading-relaxed text-text-secondary ring-hair">
+            {lang && <div className="mb-2 text-[10px] font-medium uppercase tracking-wider text-muted">{lang}</div>}
+            <pre className="m-0 whitespace-pre-wrap">{codeLines.join("\n")}</pre>
+          </div>
+        )
+        continue
+      }
+
+      // Table row
+      if (trimmed.startsWith("|") && trimmed.endsWith("|")) {
+        const rows: string[][] = []
+        while (i < lines.length) {
+          const t = lines[i].trim()
+          if (!t.startsWith("|") || !t.endsWith("|")) break
+          rows.push(t.split("|").filter(Boolean).map((c) => c.trim()))
+          i++
+        }
+        // Filter out separator rows (all cells are dashes)
+        const dataRows = rows.filter((r) => !r.every((c) => /^-+\s*$/.test(c)))
+        if (dataRows.length > 0) {
+          blocks.push(
+            <div key={idx} className="my-3 overflow-auto">
+              <table className="w-full border-collapse text-xs">
+                <tbody>
+                  {dataRows.map((row, ri) => (
+                    <tr key={ri} className={ri === 0 ? "border-b border-white/[0.08]" : ri % 2 === 0 ? "bg-white/[0.02]" : ""}>
+                      {row.map((cell, ci) => (
+                        <td key={ci} className="px-4 py-2.5 text-left text-text-secondary">{renderInline(cell)}</td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )
+        }
+        continue
+      }
+
+      // Horizontal rule
+      if (/^---+$/.test(trimmed)) {
+        i++
+        blocks.push(<div key={idx} className="my-4 border-t border-white/[0.08]" />)
+        continue
+      }
+
+      // Blockquote
+      if (trimmed.startsWith("> ")) {
+        const quoteLines: string[] = []
+        while (i < lines.length && lines[i].trim().startsWith("> ")) {
+          quoteLines.push(lines[i].trim().replace(/^>\s*/, ""))
+          i++
+        }
+        blocks.push(
+          <div key={idx} className="my-2 rounded-r-2xl border-l-2 border-brand/40 bg-brand-subtle px-4 py-2 text-sm leading-relaxed text-text-secondary">
+            {quoteLines.map((ql, qi) => (
+              <div key={qi}>{renderInline(ql)}</div>
+            ))}
+          </div>
+        )
+        continue
+      }
+
+      // Heading ## or ###
+      const hMatch = trimmed.match(/^(#{2,4})\s+(.+)$/)
+      if (hMatch) {
+        i++
+        const level = hMatch[1].length
+        const text = hMatch[2]
+        const cls = level <= 2
+          ? "mb-2 mt-5 text-sm font-semibold text-text-primary"
+          : "mb-1 mt-4 text-sm font-semibold text-text-primary"
+        blocks.push(level <= 2
+          ? <h2 key={idx} className={cls}>{renderInline(text)}</h2>
+          : <h3 key={idx} className={cls}>{renderInline(text)}</h3>
+        )
+        continue
+      }
+
+      // Unordered list
+      if (/^[-*]\s/.test(trimmed)) {
+        const items: string[] = []
+        while (i < lines.length && /^[-*]\s/.test(lines[i].trim())) {
+          items.push(lines[i].trim().replace(/^[-*]\s*/, ""))
+          i++
+        }
+        blocks.push(
+          <div key={idx} className="my-1 flex flex-col gap-1 pl-4">
+            {items.map((item, ii) => (
+              <div key={ii} className="flex gap-2 text-sm">
+                <span className="mt-[7px] h-1 w-1 flex-shrink-0 rounded-full bg-text-secondary/40" />
+                <div className="min-w-0 flex-1">{renderInline(item)}</div>
+              </div>
+            ))}
+          </div>
+        )
+        continue
+      }
+
+      // Ordered list
+      const oMatch = trimmed.match(/^(\d+)[.)]\s+(.*)$/)
+      if (oMatch) {
+        const items: string[] = []
+        const nums: string[] = []
+        while (i < lines.length) {
+          const m = lines[i].trim().match(/^(\d+)[.)]\s+(.*)$/)
+          if (!m) break
+          nums.push(m[1])
+          items.push(m[2])
+          i++
+        }
+        blocks.push(
+          <div key={idx} className="my-1 flex flex-col gap-1 pl-4">
+            {items.map((item, ii) => (
+              <div key={ii} className="flex gap-2 text-sm">
+                <span className="mt-px font-mono text-[11px] text-text-secondary/60">{nums[ii]}.</span>
+                <div className="min-w-0 flex-1">{renderInline(item)}</div>
+              </div>
+            ))}
+          </div>
+        )
+        continue
+      }
+
+      // Empty line
+      if (!trimmed) {
+        i++
+        blocks.push(<div key={idx} className="h-2" />)
+        continue
+      }
+
+      // Normal paragraph
+      i++
+      blocks.push(
+        <div key={idx} className="text-sm leading-relaxed text-text-secondary">{renderInline(trimmed)}</div>
+      )
+    }
+
+    return blocks
+  }, [content])
+
+  return <div className="space-y-0.5">{rendered}</div>
+}

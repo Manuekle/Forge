@@ -13,6 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Tooltip } from "@/components/ui/tooltip"
 import { CreateProjectModal } from "@/components/shared/create-project-modal"
 import { AGENTS } from "@/lib/constants"
+import { stripMarkdown } from "@/components/ui/markdown"
 import type { StoredProject } from "@/lib/store"
 import {
   ArrowRight, Bot, Layers, TrendingUp, Sparkles, Zap, Clock,
@@ -52,13 +53,15 @@ export default function DashboardPage() {
       fetch("/api/projects").then((r) => r.json()),
       fetch("/api/activity").then((r) => r.json()),
     ]).then(([p, a]) => {
-      setProjects(p.map((proj: StoredProject) => ({
-        ...proj,
-        _ago: Math.floor((Date.now() - new Date(proj.updatedAt).getTime()) / 60000),
-      })))
-      setActivities(a)
+      setProjects(
+        (Array.isArray(p) ? p : []).map((proj: StoredProject) => ({
+          ...proj,
+          _ago: Math.floor((Date.now() - new Date(proj.updatedAt).getTime()) / 60000),
+        }))
+      )
+      setActivities(Array.isArray(a) ? a : [])
       setLoading(false)
-    })
+    }).catch(() => setLoading(false))
   }, [])
 
   const metrics = {
@@ -132,7 +135,7 @@ export default function DashboardPage() {
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ delay: 0.3 + i * 0.06, type: "spring", stiffness: 240 }}
                         whileHover={{ y: -3 }}
-                        className="relative flex h-11 w-11 cursor-default items-center justify-center rounded-2xl ring-hair"
+                        className="relative flex h-11 w-11 cursor-default items-center justify-center rounded-full ring-hair"
                         style={{ background: `linear-gradient(160deg, ${a.color}26 0%, ${a.color}0D 100%)` }}
                       >
                         <span className="text-xs font-bold" style={{ color: a.color }}>{a.short}</span>
@@ -222,7 +225,7 @@ export default function DashboardPage() {
                             {a.agent === "orchestrator" ? "OR" : a.agent.slice(0, 2).toUpperCase()}
                           </div>
                           <div className="min-w-0">
-                            <div className="text-xs leading-relaxed text-text-secondary">{a.action}</div>
+                            <div className="text-xs leading-relaxed text-text-secondary">{stripMarkdown(a.action)}</div>
                             <div className="mt-0.5 flex items-center gap-1.5 text-[11px] text-muted">
                               <span className="text-text-secondary">{a.project}</span>
                               <span>·</span>

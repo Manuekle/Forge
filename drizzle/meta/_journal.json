@@ -8,6 +8,13 @@
       "when": 1781147187228,
       "tag": "0000_init",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1781149808286,
+      "tag": "0001_lethal_stellaris",
+      "breakpoints": true
     }
   ]
 }
