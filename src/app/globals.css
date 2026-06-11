@@ -8,6 +8,7 @@
   --color-surface-2: #18181B;      /* elevated: metrics, popovers */
   --color-surface-3: #1F1F23;      /* highest: modals, hover peak */
   --color-surface-inset: #0C0C0E;  /* recessed wells (code, traces) */
+  --color-overlay: rgba(0, 0, 0, 0.70);
 
   /* ── Theme-aware ghost fills (white-alpha on dark, black-alpha on light) ── */
   --color-hover: rgba(255, 255, 255, 0.04);
@@ -59,6 +60,17 @@
 /* ── Dark mode base ── */
 :root { color-scheme: dark; }
 
+/* ── Theme switch: circular reveal (View Transitions API) ──
+   Default cross-fade off; theme-toggle animates clip-path on the new
+   snapshot so the incoming theme sweeps out from the toggle button. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+::view-transition-old(root) { z-index: 1; }
+::view-transition-new(root) { z-index: 2; }
+
 /* ── Light mode overrides ── */
 html.light {
   color-scheme: light;
@@ -70,6 +82,7 @@ html.light {
   --color-surface-2: #F0EFEB;
   --color-surface-3: #E8E7E2;
   --color-surface-inset: #EAE9E4;
+  --color-overlay: rgba(0, 0, 0, 0.30);
   --color-hairline: rgba(0, 0, 0, 0.08);
   --color-hairline-strong: rgba(0, 0, 0, 0.14);
   --color-border: rgba(0, 0, 0, 0.09);

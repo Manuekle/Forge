@@ -83,7 +83,7 @@ export function Markdown({ content }: { content: string }) {
         } else {
           blocks.push(
             <div key={idx} className="my-3 overflow-auto rounded-2xl bg-black/30 p-4 font-mono text-[11px] leading-relaxed text-text-secondary ring-hair">
-              {lang && <div className="mb-2 text-[10px] font-medium uppercase tracking-wider text-muted">{lang}</div>}
+              {lang && <div className="mb-2 text-[10px] font-medium text-muted">{lang}</div>}
               <pre className="m-0 whitespace-pre-wrap">{codeLines.join("\n")}</pre>
             </div>
           )

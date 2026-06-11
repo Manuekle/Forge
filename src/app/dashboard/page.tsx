@@ -16,8 +16,9 @@ import { AGENTS } from "@/lib/constants"
 import { stripMarkdown } from "@/components/ui/markdown"
 import type { StoredProject } from "@/lib/store"
 import {
-  ArrowRight, Bot, Layers, TrendingUp, Sparkles, Zap, Clock,
-} from "lucide-react"
+  ArrowRight01Icon, ChatBotIcon, Layers01Icon, AnalyticsUpIcon, SparklesIcon, AlgorithmIcon, Clock01Icon,
+} from "@hugeicons/core-free-icons"
+import { Icon } from "@/components/ui/icon"
 
 type Activity = {
   id: string
@@ -28,14 +29,7 @@ type Activity = {
   timestamp: string
 }
 
-const agents = [
-  { role: "Product Manager", short: "PM", color: "#F97316" },
-  { role: "UX Designer", short: "UX", color: "#FB923C" },
-  { role: "Tech Architect", short: "AR", color: "#FCD34D" },
-  { role: "QA Engineer", short: "QA", color: "#A78BFA" },
-  { role: "Scrum Master", short: "SC", color: "#2ED47A" },
-  { role: "Business Analyst", short: "BA", color: "#4A9FF9" },
-]
+const teamAgentKeys = ["pm", "ux", "architect", "qa", "scrum", "business"] as const
 
 const fadeUp = {
   hidden: { opacity: 0, y: 14 },
@@ -85,7 +79,7 @@ export default function DashboardPage() {
               </p>
             </div>
             <Button onClick={() => setShowCreate(true)} size="sm">
-              <Sparkles size={14} />
+              <Icon icon={SparklesIcon} size={14} />
               New project
             </Button>
           </div>
@@ -120,31 +114,29 @@ export default function DashboardPage() {
               {/* Agent Status */}
               <motion.div custom={4} variants={fadeUp} initial="hidden" animate="show" className="mt-9">
                 <div className="mb-4 flex items-center gap-3">
-                  <Bot size={16} className="text-brand" />
-                  <h2 className="text-sm font-semibold text-text-primary">Active agents</h2>
-                  <span className="flex items-center gap-1.5 text-xs text-muted">
-                    <span className="h-1.5 w-1.5 rounded-full bg-success shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
-                    6/6 online
-                  </span>
+                  <Icon icon={ChatBotIcon} size={16} className="text-brand" />
+                  <h2 className="text-sm font-semibold text-text-primary">Agent team</h2>
+                  <span className="text-xs text-muted">6 specialists + orchestrator</span>
                 </div>
-                <div className="flex items-center gap-3">
-                  {agents.map((a, i) => (
-                    <Tooltip key={a.role} content={a.role}>
-                      <motion.div
-                        initial={{ opacity: 0, scale: 0.6 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ delay: 0.3 + i * 0.06, type: "spring", stiffness: 240 }}
-                        whileHover={{ y: -3 }}
-                        className="relative flex h-11 w-11 cursor-default items-center justify-center rounded-full ring-hair"
-                        style={{ background: `linear-gradient(160deg, ${a.color}26 0%, ${a.color}0D 100%)` }}
-                      >
-                        <span className="text-xs font-bold" style={{ color: a.color }}>{a.short}</span>
-                        <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full ring-2 ring-surface" style={{ backgroundColor: a.color }}>
-                          <span className="block h-full w-full animate-ping rounded-full opacity-40" style={{ backgroundColor: a.color }} />
-                        </span>
-                      </motion.div>
-                    </Tooltip>
-                  ))}
+                <div className="rounded-2xl bg-surface p-5 lift-1">
+                  <div className="flex items-center justify-around gap-2">
+                    {teamAgentKeys.map((key) => {
+                      const agent = AGENTS[key]
+                      return (
+                        <Tooltip key={key} content={agent.description}>
+                          <div className="flex flex-col items-center gap-2.5">
+                            <div
+                              className="relative flex h-12 w-12 items-center justify-center rounded-xl ring-hair transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm cursor-default"
+                              style={{ backgroundColor: `${agent.color}18` }}
+                            >
+                              <Icon icon={agent.icon} size={20} style={{ color: agent.color }} />
+                            </div>
+                            <span className="max-w-[72px] truncate text-center text-[10px] font-semibold text-text-secondary leading-tight">{agent.label}</span>
+                          </div>
+                        </Tooltip>
+                      )
+                    })}
+                  </div>
                 </div>
               </motion.div>
 
@@ -153,7 +145,7 @@ export default function DashboardPage() {
                 {/* Recent Projects */}
                 <div className="flex flex-col gap-3 lg:col-span-3">
                   <div className="mb-1 flex items-center gap-3">
-                    <Layers size={15} className="text-brand" />
+                    <Icon icon={Layers01Icon} size={15} className="text-brand" />
                     <h2 className="text-sm font-semibold text-text-primary">Recent projects</h2>
                   </div>
                   {projects.slice(0, 3).map((p, i) => (
@@ -172,10 +164,10 @@ export default function DashboardPage() {
                               <p className="mt-1 truncate text-xs text-text-secondary">{p.description}</p>
                             </div>
                             <span className="flex flex-shrink-0 items-center gap-1 text-[11px] text-muted">
-                              <Clock size={11} />
+                              <Icon icon={Clock01Icon} size={11} />
                               {(p as StoredProject & { _ago?: number })._ago ?? 0}m
                             </span>
-                            <ArrowRight size={15} className="text-muted transition-all duration-200 group-hover:translate-x-0.5 group-hover:text-brand" />
+                            <Icon icon={ArrowRight01Icon} size={15} className="text-muted transition-all duration-200 group-hover:translate-x-0.5 group-hover:text-brand" />
                           </div>
                           <div className="mt-4 flex items-center gap-3">
                             <Progress value={p.progress} className="flex-1" />
@@ -188,12 +180,12 @@ export default function DashboardPage() {
                   {projects.length === 0 && (
                     <Card variant="inset" className="flex flex-col items-center px-8 py-12 text-center">
                       <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-[18px] glass-brand">
-                        <Zap size={22} className="text-brand" />
+                        <Icon icon={AlgorithmIcon} size={22} className="text-brand" />
                       </div>
                       <h3 className="text-sm font-semibold text-text-primary">No projects yet</h3>
                       <p className="mt-1.5 max-w-[320px] text-sm text-text-secondary">Spin up your first project and let the team get to work.</p>
                       <Button className="mt-5" size="sm" onClick={() => setShowCreate(true)}>
-                        <Sparkles size={14} />
+                        <Icon icon={SparklesIcon} size={14} />
                         Create project
                       </Button>
                     </Card>
@@ -203,7 +195,7 @@ export default function DashboardPage() {
                 {/* Activity Feed */}
                 <div className="flex flex-col gap-3 lg:col-span-2">
                   <div className="mb-1 flex items-center gap-3">
-                    <TrendingUp size={15} className="text-brand" />
+                    <Icon icon={AnalyticsUpIcon} size={15} className="text-brand" />
                     <h2 className="text-sm font-semibold text-text-primary">Agent activity</h2>
                   </div>
                   <Card variant="elevated" className="p-2">
@@ -217,12 +209,12 @@ export default function DashboardPage() {
                           transition={{ delay: 0.1 + i * 0.05 }}
                           className="flex gap-3 rounded-2xl p-3 transition-colors duration-200 hover:bg-hover"
                         >
-                          <div className="mt-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-[8px] font-bold"
+                          <div className="mt-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full"
                             style={{
                               backgroundColor: agentData ? `${agentData.color}22` : "rgba(232,80,2,0.15)",
                               color: agentData?.color || "#E85002",
                             }}>
-                            {a.agent === "orchestrator" ? "OR" : a.agent.slice(0, 2).toUpperCase()}
+                            <Icon icon={agentData.icon} size={14} />
                           </div>
                           <div className="min-w-0">
                             <div className="text-xs leading-relaxed text-text-secondary">{stripMarkdown(a.action)}</div>

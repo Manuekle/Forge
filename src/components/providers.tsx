@@ -6,7 +6,7 @@ import { ToastProvider } from "@/components/ui/toast"
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
-    <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} forcedTheme={undefined}>
+    <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} disableTransitionOnChange>
       <TooltipProvider>
         <ToastProvider>{children}</ToastProvider>
       </TooltipProvider>

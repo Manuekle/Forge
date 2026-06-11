@@ -6,7 +6,8 @@ import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Sparkles, Mail, Lock, Rocket } from "lucide-react"
+import { Icon } from "@/components/ui/icon"
+import { SparklesIcon, Mail01Icon, LockIcon, Rocket01Icon } from "@hugeicons/core-free-icons"
 
 const DEMO_EMAIL = "demo@forge.dev"
 const DEMO_PASSWORD = "forge"
@@ -61,12 +62,12 @@ export default function SignInPage() {
 
           <div>
             <label className="mb-1.5 block text-xs font-medium text-text-secondary">Email</label>
-            <Input type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required icon={<Mail size={15} />} />
+            <Input type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required icon={<Icon icon={Mail01Icon} size={15} />} />
           </div>
 
           <div>
             <label className="mb-1.5 block text-xs font-medium text-text-secondary">Password</label>
-            <Input type="password" placeholder="Enter password" value={password} onChange={(e) => setPassword(e.target.value)} required icon={<Lock size={15} />} />
+            <Input type="password" placeholder="Enter password" value={password} onChange={(e) => setPassword(e.target.value)} required icon={<Icon icon={LockIcon} size={15} />} />
           </div>
 
           {error && (
@@ -76,7 +77,7 @@ export default function SignInPage() {
           )}
 
           <Button type="submit" size="lg" className="w-full" disabled={loading}>
-            {loading ? "Signing in…" : <><Sparkles size={15} /> Sign in</>}
+            {loading ? "Signing in…" : <><Icon icon={SparklesIcon} size={15} /> Sign in</>}
           </Button>
 
           <div className="relative">
@@ -104,7 +105,7 @@ export default function SignInPage() {
               })
             }}
           >
-            <Rocket size={15} /> Demo login
+            <Icon icon={Rocket01Icon} size={15} /> Demo login
           </Button>
 
           <p className="text-center text-xs text-muted">

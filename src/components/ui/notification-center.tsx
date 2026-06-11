@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { useRouter } from "next/navigation"
-import { Bell, CheckCircle2, AlertCircle, Loader2, ExternalLink, X } from "lucide-react"
+import { Notification01Icon, CheckmarkCircle02Icon, AlertCircleIcon, Loading03Icon, ArrowUpRight02Icon, Cancel01Icon } from "@hugeicons/core-free-icons"
+import { Icon } from "@/components/ui/icon"
 import { cn } from "@/lib/utils"
 import { formatDuration } from "@/lib/utils"
 import type { StoredRunWithProject } from "@/lib/store"
@@ -73,7 +74,7 @@ export function NotificationCenter() {
         onClick={() => setOpen(!open)}
         className="relative flex h-9 w-9 items-center justify-center rounded-full text-muted transition-all hover:bg-surface-2 hover:text-text-primary"
       >
-        <Bell size={17} />
+        <Icon icon={Notification01Icon} size={17} />
         {activeCount > 0 && (
           <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-error px-1 text-[10px] font-bold leading-none text-white">
             {activeCount > 9 ? "9+" : activeCount}
@@ -104,7 +105,7 @@ export function NotificationCenter() {
                 onClick={() => setOpen(false)}
                 className="flex h-6 w-6 items-center justify-center rounded-full text-muted transition-colors hover:bg-hover-strong hover:text-text-primary"
               >
-                <X size={14} />
+                <Icon icon={Cancel01Icon} size={14} />
               </button>
             </div>
 
@@ -140,11 +141,11 @@ export function NotificationCenter() {
             <div className="max-h-[420px] overflow-auto px-2 pb-2">
               {loading ? (
                 <div className="flex items-center justify-center py-12">
-                  <Loader2 size={18} className="animate-spin text-muted" />
+                  <Icon icon={Loading03Icon} size={18} className="animate-spin text-muted" />
                 </div>
               ) : filtered().length === 0 ? (
                 <div className="flex flex-col items-center py-12 text-center">
-                  <Bell size={24} className="mb-2 text-muted" />
+                  <Icon icon={Notification01Icon} size={24} className="mb-2 text-muted" />
                   <div className="text-sm text-text-secondary">No notifications</div>
                   <div className="mt-0.5 text-xs text-muted">
                     {activeFilter === "running" ? "No runs in progress" :
@@ -178,9 +179,9 @@ export function NotificationCenter() {
                               <span className="relative inline-flex h-3 w-3 rounded-full bg-brand" />
                             </span>
                           ) : isFailed ? (
-                            <AlertCircle size={15} className="text-error" />
+                            <Icon icon={AlertCircleIcon} size={15} className="text-error" />
                           ) : (
-                            <CheckCircle2 size={15} className="text-success" />
+                            <Icon icon={CheckmarkCircle02Icon} size={15} className="text-success" />
                           )}
                         </span>
                         <div className="min-w-0 flex-1">
@@ -213,7 +214,7 @@ export function NotificationCenter() {
                             <span>· {ago}</span>
                           </div>
                         </div>
-                        <ExternalLink size={13} className="mt-1 flex-shrink-0 text-muted" />
+                        <Icon icon={ArrowUpRight02Icon} size={13} className="mt-1 flex-shrink-0 text-muted" />
                       </button>
                     )
                   })}

@@ -3,6 +3,7 @@
 import { motion } from "framer-motion"
 import { Badge } from "@/components/ui/badge"
 import { Markdown } from "@/components/ui/markdown"
+import { Icon } from "@/components/ui/icon"
 import { AGENTS } from "@/lib/constants"
 import type { Decision } from "@/types"
 
@@ -42,9 +43,9 @@ export function AgentDebateCard({ decision }: AgentDebateCardProps) {
               transition={{ duration: 0.2, delay: i * 0.05 }}
               className="flex gap-3"
             >
-              <div className="mt-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-[9px] text-[9px] font-bold"
+              <div className="mt-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-[9px]"
                 style={{ backgroundColor: `${agent.color}22`, color: agent.color }}>
-                {entry.agent === "orchestrator" ? "OR" : entry.agent.slice(0, 2).toUpperCase()}
+                <Icon icon={agent.icon} size={14} />
               </div>
               <div className="min-w-0 flex-1 text-sm leading-relaxed text-text-secondary">
                 <Markdown content={entry.message} />

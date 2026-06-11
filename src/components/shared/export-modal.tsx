@@ -7,9 +7,10 @@ import { Button } from "@/components/ui/button"
 import { useToast } from "@/components/ui/toast"
 import type { StoredArtifact, StoredDecision } from "@/lib/store"
 import {
-  FileText, Check, Download, ExternalLink, Code, BookOpen,
-  GitBranch, Layers
-} from "lucide-react"
+  File01Icon, Tick01Icon, Download01Icon, ArrowUpRight02Icon, SourceCodeIcon, Book01Icon,
+  GitBranchIcon, Layers01Icon
+} from "@hugeicons/core-free-icons"
+import { Icon } from "@/components/ui/icon"
 
 interface ExportModalProps {
   open: boolean
@@ -24,7 +25,7 @@ const formats = [
     id: "markdown",
     label: "Markdown",
     desc: "All artifacts as a single .md document",
-    icon: BookOpen,
+    icon: Book01Icon,
     color: "#FB923C",
     available: true,
   },
@@ -32,7 +33,7 @@ const formats = [
     id: "json",
     label: "JSON",
     desc: "Raw structured export for APIs",
-    icon: Layers,
+    icon: Layers01Icon,
     color: "#2ED47A",
     available: true,
   },
@@ -40,7 +41,7 @@ const formats = [
     id: "pdf",
     label: "PDF",
     desc: "Coming soon",
-    icon: FileText,
+    icon: File01Icon,
     color: "#F97316",
     available: false,
   },
@@ -48,7 +49,7 @@ const formats = [
     id: "notion",
     label: "Notion",
     desc: "Coming soon",
-    icon: ExternalLink,
+    icon: ArrowUpRight02Icon,
     color: "#FCD34D",
     available: false,
   },
@@ -56,7 +57,7 @@ const formats = [
     id: "jira",
     label: "Jira",
     desc: "Coming soon",
-    icon: GitBranch,
+    icon: GitBranchIcon,
     color: "#A78BFA",
     available: false,
   },
@@ -64,7 +65,7 @@ const formats = [
     id: "github",
     label: "GitHub",
     desc: "Coming soon",
-    icon: Code,
+    icon: SourceCodeIcon,
     color: "#4A9FF9",
     available: false,
   },
@@ -134,7 +135,7 @@ export function ExportModal({ open, onOpenChange, projectName = "Project", artif
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-2">
           {formats.map((f, i) => {
-            const Icon = f.icon
+            const iconObj = f.icon
             const isSelected = selected === f.id
             return (
               <motion.button
@@ -159,13 +160,13 @@ export function ExportModal({ open, onOpenChange, projectName = "Project", artif
                     animate={{ scale: 1 }}
                     className="absolute right-2.5 top-2.5 flex h-5 w-5 items-center justify-center rounded-full bg-brand shadow-brand"
                   >
-                    <Check size={11} className="text-white" />
+                    <Icon icon={Tick01Icon} size={11} className="text-white" />
                   </motion.div>
                 )}
                 <div className="mb-1.5 flex items-center gap-2.5">
                   <div className="flex h-8 w-8 items-center justify-center rounded-full"
                     style={{ backgroundColor: `${f.color}22` }}>
-                    <Icon size={15} style={{ color: f.color }} />
+                    <Icon icon={iconObj} size={15} style={{ color: f.color }} />
                   </div>
                   <span className="text-sm font-medium text-text-primary">{f.label}</span>
                 </div>
@@ -181,7 +182,7 @@ export function ExportModal({ open, onOpenChange, projectName = "Project", artif
           </Button>
           <Button size="sm" disabled={!selected} onClick={handleExport}>
             <span className="flex items-center gap-1.5">
-              <Download size={13} />
+              <Icon icon={Download01Icon} size={13} />
               Export
             </span>
           </Button>

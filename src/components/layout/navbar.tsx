@@ -1,6 +1,7 @@
 "use client"
 
-import { Sparkles } from "lucide-react"
+import { SparklesIcon } from "@hugeicons/core-free-icons"
+import { Icon } from "@/components/ui/icon"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { formatDuration } from "@/lib/utils"
@@ -17,27 +18,29 @@ export function Navbar({ breadcrumb = "Dashboard", projectMode, latestRun }: Nav
   const router = useRouter()
 
   return (
-    <div className="relative z-10 flex h-16 flex-shrink-0 items-center gap-4 px-6">
+    <div className="relative z-10 flex h-16 flex-shrink-0 items-center justify-between px-8">
       <div className="flex items-center gap-2 text-sm">
         <span className="text-muted">Forge</span>
         <span className="text-faint">/</span>
         <span className="font-medium text-text-primary">{breadcrumb}</span>
       </div>
-      <div className="flex-1" />
-      <NotificationCenter />
-      <ThemeToggle />
-      <div className="ml-1" />
-      {!projectMode && (
-        <div className="flex items-center gap-2.5">
-          <Button onClick={() => router.push("/projects")} size="sm">
-            <Sparkles size={14} />
-            New project
-          </Button>
+      <div className="flex items-center">
+        <div className="flex items-center gap-1">
+          <NotificationCenter />
+          <ThemeToggle />
         </div>
-      )}
-      {projectMode && (
-        <div className="flex items-center gap-2.5">
-          {latestRun && (
+        {!projectMode && (
+          <>
+            <div className="mx-3 h-5 w-px bg-hairline" />
+            <Button onClick={() => router.push("/projects")} size="sm">
+              <Icon icon={SparklesIcon} size={14} />
+              New project
+            </Button>
+          </>
+        )}
+        {projectMode && latestRun && (
+          <>
+            <div className="mx-3 h-5 w-px bg-hairline" />
             <div className="flex items-center gap-2 rounded-full bg-brand-subtle px-3 py-1.5 text-xs ring-hair">
               <span className="relative flex h-1.5 w-1.5">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand opacity-50" />
@@ -46,9 +49,9 @@ export function Navbar({ breadcrumb = "Dashboard", projectMode, latestRun }: Nav
               <span className="font-medium text-brand">Run #{latestRun.id.slice(0, 6)}</span>
               <span className="text-text-secondary">{formatDuration(latestRun.duration)}</span>
             </div>
-          )}
-        </div>
-      )}
+          </>
+        )}
+      </div>
     </div>
   )
 }

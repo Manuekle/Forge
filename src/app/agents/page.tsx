@@ -7,7 +7,8 @@ import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Modal } from "@/components/ui/modal"
 import { AGENTS } from "@/lib/constants"
-import { Sparkles, CheckCircle2, ArrowRight, GitBranch, Brain, FileText, Shield, BarChart3, Layers } from "lucide-react"
+import { CheckmarkCircle01Icon, ArrowRight01Icon, GitBranchIcon, BrainIcon, File01Icon, Shield01Icon, BarChartIcon, Layers01Icon } from "@hugeicons/core-free-icons"
+import { Icon } from "@/components/ui/icon"
 import type { AgentType } from "@/types"
 import type { Agent } from "@/types"
 
@@ -56,7 +57,7 @@ const agentWorkflows: Record<string, { phase: string; desc: string }[]> = {
   ],
 }
 
-const workflowIcons = [Brain, FileText, BarChart3, Shield, Layers, GitBranch]
+const workflowIcons = [BrainIcon, File01Icon, BarChartIcon, Shield01Icon, Layers01Icon, GitBranchIcon]
 
 export default function AgentsPage() {
   const entries = Object.entries(AGENTS).filter(([k]) => k !== "orchestrator") as [AgentType, typeof AGENTS[AgentType]][]
@@ -84,7 +85,7 @@ export default function AgentsPage() {
             <div className="pointer-events-none absolute -right-10 -top-16 h-48 w-48 rounded-full opacity-50 blur-3xl aurora" />
             <div className="relative flex flex-wrap items-center gap-5">
               <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-full gradient-brand text-white shadow-brand-lg">
-                <Sparkles size={22} />
+                <Icon icon={AGENTS.orchestrator.icon} size={22} />
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-3">
@@ -117,9 +118,9 @@ export default function AgentsPage() {
                 <button onClick={() => setSelected({ key, agent })} className="w-full text-left">
                   <Card hover variant="elevated" className="group h-full p-5">
                     <div className="flex items-center gap-3">
-                      <div className="flex h-12 w-12 items-center justify-center rounded-full text-sm font-bold transition-transform duration-300 group-hover:scale-105"
+                      <div className="flex h-12 w-12 items-center justify-center rounded-full transition-transform duration-300 group-hover:scale-105"
                         style={{ background: agent.color, color: "#fff" }}>
-                        {key.slice(0, 2).toUpperCase()}
+                        <Icon icon={agent.icon} size={22} />
                       </div>
                       <div>
                         <h3 className="text-sm font-semibold text-text-primary">{agent.label}</h3>
@@ -152,10 +153,10 @@ export default function AgentsPage() {
             <div className="p-6">
               <div className="mb-6 flex items-center gap-3">
                 <div
-                  className="flex h-12 w-12 items-center justify-center rounded-full text-sm font-bold text-white"
+                  className="flex h-12 w-12 items-center justify-center rounded-full text-white"
                   style={{ background: selected.agent.color }}
                 >
-                  {selected.key.slice(0, 2).toUpperCase()}
+                  <Icon icon={selected.agent.icon} size={22} />
                 </div>
                 <div>
                   <h2 className="text-base font-semibold text-text-primary" style={{ fontFamily: "var(--font-syne)" }}>{selected.agent.label}</h2>
@@ -172,7 +173,7 @@ export default function AgentsPage() {
                   {selected.agent.capabilities.map((c) => (
                     <span key={c} className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-medium"
                       style={{ background: `${selected.agent.color}18`, color: selected.agent.color }}>
-                      <CheckCircle2 size={12} />
+                      <Icon icon={CheckmarkCircle01Icon} size={12} />
                       {c}
                     </span>
                   ))}
@@ -184,13 +185,13 @@ export default function AgentsPage() {
                 <h3 className="mb-4 text-xs font-semibold text-text-primary">Workflow</h3>
                 <div className="flex flex-col gap-3">
                   {(agentWorkflows[selected.key] ?? []).map((step, i) => {
-                    const Icon = workflowIcons[i % workflowIcons.length]
+                    const iconObj = workflowIcons[i % workflowIcons.length]
                     return (
                       <div key={i} className="flex gap-3">
                         <div className="flex flex-col items-center">
                           <div className="flex h-7 w-7 items-center justify-center rounded-full"
                             style={{ background: `${selected.agent.color}18`, color: selected.agent.color }}>
-                            <Icon size={13} />
+                            <Icon icon={iconObj} size={13} />
                           </div>
                           {i < (agentWorkflows[selected.key]?.length ?? 0) - 1 && (
                             <div className="mt-0.5 h-full w-px" style={{ background: `${selected.agent.color}18` }} />
@@ -209,7 +210,7 @@ export default function AgentsPage() {
               <div className="mt-6 flex justify-end pt-5 hairline-t">
                 <div className="flex items-center gap-1.5 text-xs text-muted">
                   Click an agent card to see their workflow
-                  <ArrowRight size={12} />
+                  <Icon icon={ArrowRight01Icon} size={12} />
                 </div>
               </div>
             </div>

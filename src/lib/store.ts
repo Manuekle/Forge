@@ -14,6 +14,8 @@ export type StoredProject = {
   updatedAt: Date
 }
 
+export type DecisionVote = { vote: string; confidence: number | null; concerns: string; round: number }
+
 export type StoredDecision = {
   id: string
   projectId: string
@@ -22,6 +24,7 @@ export type StoredDecision = {
   confidence: number | null
   consensus: string | null
   entries: { agent: string; message: string; timestamp: string }[]
+  votes: Record<string, DecisionVote>
   createdAt: Date
 }
 
@@ -45,6 +48,44 @@ export type RunCitation = {
   snippet: string
 }
 
+export type StoredRunPlan = {
+  strategy: string
+  selected: { agent: string; reason: string }[]
+  skipped: { agent: string; reason: string }[]
+  source: string
+  log?: { at: string; type: string; detail: string; reason: string }[]
+}
+
+/** A structured execution event emitted live while a run executes. */
+export type RunEvent = {
+  at: string // elapsed clock "[mm:ss.ff]"
+  ts: string // ISO timestamp
+  kind:
+    | "retrieval"
+    | "plan"
+    | "agent_state"
+    | "handoff"
+    | "vote"
+    | "checkpoint"
+    | "consensus"
+    | "artifact"
+    | "complete"
+  agent?: string
+  state?: "waiting" | "reading_context" | "reasoning" | "revising" | "reviewing" | "voting" | "completed"
+  detail: string
+  from?: string
+  to?: string
+  summary?: string
+  vote?: string
+  confidence?: number
+}
+
+export type RunOutcome = {
+  confidence: number | null
+  votes: Record<string, DecisionVote>
+  consensus: string | null
+}
+
 export type StoredRun = {
   id: string
   projectId: string
@@ -52,7 +93,12 @@ export type StoredRun = {
   progress: string | null
   duration: number | null
   trace: { time: string; action: string; detail: string }[]
+  plan: StoredRunPlan | null
   citations: RunCitation[]
+  events: RunEvent[]
+  confidence: number | null
+  votes: Record<string, DecisionVote>
+  consensus: string | null
   createdAt: Date
 }
 
@@ -95,14 +141,16 @@ export interface DataStore {
   getDecisions(projectId: string): Promise<StoredDecision[]>
   createDecision(projectId: string, topic: string): Promise<StoredDecision>
   addDecisionEntry(decisionId: string, agent: string, message: string): Promise<void>
-  resolveDecision(decisionId: string, consensus: string, confidence: number): Promise<void>
+  resolveDecision(decisionId: string, consensus: string, confidence: number, votes?: Record<string, DecisionVote>): Promise<void>
   getArtifacts(projectId: string): Promise<StoredArtifact[]>
   createArtifact(projectId: string, type: string, title: string, content: string): Promise<StoredArtifact>
   getRuns(projectId: string): Promise<StoredRun[]>
   getAllRuns(userId: string): Promise<StoredRunWithProject[]>
   createRun(projectId: string): Promise<StoredRun>
+  setRunPlan(id: string, plan: StoredRunPlan): Promise<void>
   updateRunProgress(id: string, progress: string): Promise<void>
-  completeRun(id: string, duration: number, trace: StoredRun["trace"], citations?: RunCitation[]): Promise<void>
+  appendRunEvent(id: string, event: RunEvent): Promise<void>
+  completeRun(id: string, duration: number, trace: StoredRun["trace"], citations?: RunCitation[], outcome?: RunOutcome): Promise<void>
   failRun(id: string, trace: StoredRun["trace"]): Promise<void>
   getActivities(userId: string, limit?: number): Promise<Activity[]>
   getProjectProgress(projectId: string): Promise<number>
@@ -224,6 +272,7 @@ const memStore: DataStore = {
       confidence: null,
       consensus: null,
       entries: [],
+      votes: {},
       createdAt: new Date(),
     }
     decisions.push(decision)
@@ -248,12 +297,13 @@ const memStore: DataStore = {
     }
   },
 
-  async resolveDecision(decisionId, consensus, confidence) {
+  async resolveDecision(decisionId, consensus, confidence, votes) {
     const d = decisions.find((x) => x.id === decisionId)
     if (!d) return
     d.status = "consensus"
     d.consensus = consensus
     d.confidence = confidence
+    if (votes) d.votes = votes
   },
 
   async getArtifacts(projectId) {
@@ -291,10 +341,16 @@ const memStore: DataStore = {
 
   async createRun(projectId) {
     const run: StoredRun = {
-      id: uid(), projectId, status: "running", progress: null, duration: null, trace: [], citations: [], createdAt: new Date(),
+      id: uid(), projectId, status: "running", progress: null, duration: null, trace: [], plan: null, citations: [], events: [], confidence: null, votes: {}, consensus: null, createdAt: new Date(),
     }
     runs.push(run)
     return run
+  },
+
+  async setRunPlan(id, plan) {
+    const r = runs.find((x) => x.id === id)
+    if (!r) return
+    r.plan = plan
   },
 
   async updateRunProgress(id, progress) {
@@ -303,7 +359,13 @@ const memStore: DataStore = {
     r.progress = progress
   },
 
-  async completeRun(id, duration, trace, citations = []) {
+  async appendRunEvent(id, event) {
+    const r = runs.find((x) => x.id === id)
+    if (!r) return
+    r.events.push(event)
+  },
+
+  async completeRun(id, duration, trace, citations = [], outcome) {
     const r = runs.find((x) => x.id === id)
     if (!r) return
     r.status = "completed"
@@ -311,6 +373,11 @@ const memStore: DataStore = {
     r.duration = duration
     r.trace = trace
     r.citations = citations
+    if (outcome) {
+      r.confidence = outcome.confidence
+      r.votes = outcome.votes
+      r.consensus = outcome.consensus
+    }
   },
 
   async failRun(id, trace) {
@@ -370,6 +437,7 @@ function mapDecision(r: typeof schema.decisions.$inferSelect): StoredDecision {
     confidence: r.confidence ?? null,
     consensus: r.consensus ?? null,
     entries: r.entries ?? [],
+    votes: r.votes ?? {},
     createdAt: r.createdAt,
   }
 }
@@ -382,7 +450,12 @@ function mapRun(r: typeof schema.runs.$inferSelect): StoredRun {
     progress: r.progress ?? null,
     duration: r.duration ?? null,
     trace: r.trace ?? [],
+    plan: r.plan ?? null,
     citations: r.citations ?? [],
+    events: (r.events ?? []) as RunEvent[],
+    confidence: r.confidence ?? null,
+    votes: r.votes ?? {},
+    consensus: r.consensus ?? null,
     createdAt: r.createdAt,
   }
 }
@@ -471,10 +544,10 @@ const dbStore: DataStore = {
     }
   },
 
-  async resolveDecision(decisionId, consensus, confidence) {
+  async resolveDecision(decisionId, consensus, confidence, votes) {
     await getDb()
       .update(schema.decisions)
-      .set({ status: "consensus", consensus, confidence })
+      .set({ status: "consensus", consensus, confidence, ...(votes ? { votes } : {}) })
       .where(eq(schema.decisions.id, decisionId))
   },
 
@@ -530,14 +603,35 @@ const dbStore: DataStore = {
     return mapRun(row)
   },
 
+  async setRunPlan(id, plan) {
+    await getDb().update(schema.runs).set({ plan }).where(eq(schema.runs.id, id))
+  },
+
   async updateRunProgress(id, progress) {
     await getDb().update(schema.runs).set({ progress }).where(eq(schema.runs.id, id))
   },
 
-  async completeRun(id, duration, trace, citations = []) {
+  async appendRunEvent(id, event) {
+    // Atomic jsonb append — avoids read-modify-write on every event.
     await getDb()
       .update(schema.runs)
-      .set({ status: "completed", progress: null, duration, trace, citations })
+      .set({ events: sql`${schema.runs.events} || ${JSON.stringify([event])}::jsonb` })
+      .where(eq(schema.runs.id, id))
+  },
+
+  async completeRun(id, duration, trace, citations = [], outcome) {
+    await getDb()
+      .update(schema.runs)
+      .set({
+        status: "completed",
+        progress: null,
+        duration,
+        trace,
+        citations,
+        ...(outcome
+          ? { confidence: outcome.confidence, votes: outcome.votes, consensus: outcome.consensus }
+          : {}),
+      })
       .where(eq(schema.runs.id, id))
   },
 
@@ -637,23 +731,88 @@ async function seedDemo(s: DataStore, userId: string) {
   await s.createArtifact(p1.id, "ux", "User Flows", `## User Flows\n\n### Buyer Flow\n1. Land on home page → browse meals by location\n2. Filter by cuisine, price, distance\n3. Select meal → view details\n4. Place order → choose pickup time\n5. Pay → receive confirmation\n6. Pick up → rate experience`)
 
   const run = await s.createRun(p1.id)
+  // Demo plan + event stream: a faithful replay of a real orchestrated run so
+  // the orchestration view is fully populated without waiting for a live run.
+  await s.setRunPlan(run.id, {
+    strategy: "Ground the marketplace in business viability first, then product, UX and architecture; QA reviews everything before consensus.",
+    selected: [
+      { agent: "business", reason: "Two-sided marketplace — monetization and liquidity strategy must anchor every other decision." },
+      { agent: "pm", reason: "Define the pickup-first MVP scope, user stories and success metrics." },
+      { agent: "ux", reason: "Buyer and cook journeys are the core of a food marketplace experience." },
+      { agent: "architect", reason: "Payments, identity and ordering need explicit API and data-model decisions." },
+      { agent: "qa", reason: "Food safety, fraud and payment risks demand adversarial review before consensus." },
+    ],
+    skipped: [
+      { agent: "scrum", reason: "Design-stage request — sprint planning deferred until the architecture stabilizes." },
+    ],
+    source: "model",
+    log: [
+      { at: "[00:09.41]", type: "plan", detail: "5 selected · 1 skipped", reason: "order: business → pm → ux → architect → qa" },
+      { at: "[01:29.12]", type: "revision", detail: "QA critique routed to architect (round 2)", reason: "Escrow release flow lacks dispute-window handling for no-show pickups" },
+      { at: "[02:41.30]", type: "confidence", detail: "confidence 0.87 from 5 votes", reason: "vote score 0.86 (3 approve / 2 concerns / 0 reject) · self-reported 0.89 · blended 0.7/0.3" },
+    ],
+  })
+  const demoEvents: RunEvent[] = []
+  const baseTs = Date.now() - 167_000
+  let seq = 0
+  const ev = (at: string, e: Omit<RunEvent, "at" | "ts">) => {
+    demoEvents.push({ at, ts: new Date(baseTs + ++seq * 1500).toISOString(), ...e })
+  }
+  ev("[00:00.48]", { kind: "retrieval", agent: "orchestrator", detail: "Retrieved 3 grounded sources (local-corpus)", summary: "[S1] Marketplace Trust & Safety · [S2] Marketplace Liquidity & Pricing · [S3] Application Security Baseline" })
+  ev("[00:09.41]", { kind: "plan", agent: "orchestrator", detail: "Ground the marketplace in business viability first, then product, UX and architecture; QA reviews everything before consensus.", summary: "business → pm → ux → architect → qa · skipped: scrum" })
+  const demoFlow: { agent: string; from: string; t0: number; vote: string; conf: number; summary: string }[] = [
+    { agent: "business", from: "orchestrator", t0: 10, vote: "approve", conf: 0.84, summary: "Commission-on-order revenue model with cook subscription upsell" },
+    { agent: "pm", from: "business", t0: 26, vote: "approve", conf: 0.82, summary: "Pickup-first MVP: browse, order, scheduled pickup, ratings" },
+    { agent: "ux", from: "pm", t0: 44, vote: "approve_with_concerns", conf: 0.78, summary: "Buyer flow in 5 steps; cook onboarding needs identity-verification UX [S1]" },
+    { agent: "architect", from: "ux", t0: 61, vote: "approve_with_concerns", conf: 0.8, summary: "Next.js + Postgres + Stripe Connect; escrow held until pickup confirmation [S2]" },
+    { agent: "qa", from: "architect", t0: 78, vote: "approve_with_concerns", conf: 0.72, summary: "Top risks: fraud surface without auth [S3], food-safety liability, dispute handling" },
+  ]
+  const mm = (sec: number) => `[${String(Math.floor(sec / 60)).padStart(2, "0")}:${String(sec % 60).padStart(2, "0")}.20]`
+  for (const f of demoFlow) {
+    ev(mm(f.t0), { kind: "handoff", from: f.from, to: f.agent, detail: `${f.from === "orchestrator" ? "Orchestrator delegates to" : "Output handed to"} ${f.agent}`, summary: f.summary })
+    ev(mm(f.t0 + 1), { kind: "agent_state", agent: f.agent, state: "reading_context", detail: "Reading project context + prior agent outputs + 3 grounded sources" })
+    ev(mm(f.t0 + 3), { kind: "agent_state", agent: f.agent, state: f.agent === "qa" ? "reviewing" : "reasoning", detail: f.agent === "qa" ? "Reviewing the team's work and assessing risks" : "Analyzing the request and generating output" })
+    ev(mm(f.t0 + 13), { kind: "agent_state", agent: f.agent, state: "voting", detail: "Casting vote on the project direction" })
+    ev(mm(f.t0 + 14), { kind: "vote", agent: f.agent, vote: f.vote, confidence: f.conf, detail: `${f.agent} voted ${f.vote.replace(/_/g, " ")} (confidence ${f.conf.toFixed(2)})` })
+    ev(mm(f.t0 + 15), { kind: "agent_state", agent: f.agent, state: "completed", detail: "Submitted output to the orchestrator", summary: f.summary })
+  }
+  ev("[01:29.12]", { kind: "checkpoint", agent: "orchestrator", from: "qa", to: "architect", detail: "QA critique routed to Architect for revision (round 2)", summary: "Escrow release flow lacks dispute-window handling for no-show pickups" })
+  ev("[01:30.02]", { kind: "agent_state", agent: "architect", state: "revising", detail: "Revising prior output (round 2)" })
+  ev("[01:52.44]", { kind: "vote", agent: "architect", vote: "approve", confidence: 0.85, detail: "architect voted approve (confidence 0.85)" })
+  ev("[01:53.10]", { kind: "agent_state", agent: "architect", state: "completed", detail: "Submitted revised output (round 2) to the orchestrator", summary: "Added 24h dispute window + escrow release state machine" })
+  ev("[02:41.30]", { kind: "vote", agent: "orchestrator", confidence: 0.87, detail: "Vote tally complete — run confidence 0.87", summary: "vote score 0.86 (3 approve / 2 concerns / 0 reject / 0 abstain) · self-reported 0.89 · blended 0.7/0.3" })
+  ev("[02:42.18]", { kind: "consensus", agent: "orchestrator", confidence: 0.87, detail: "Consensus reached (confidence 0.87, vote-derived)", summary: "Pickup-first marketplace MVP with required authentication, Stripe Connect escrow and a 24h dispute window." })
+  ev("[02:47.66]", { kind: "complete", agent: "orchestrator", confidence: 0.87, detail: "Run complete: 5 agents, 1 revision, 5 artifacts", summary: "execution path: business → pm → ux → architect → qa" })
+  for (const e of demoEvents) await s.appendRunEvent(run.id, e)
   await s.completeRun(
     run.id,
     167,
     [
       { time: "[00:00.12]", action: "iq.intent.parse", detail: "marketplace / food / p2p" },
       { time: "[00:00.48]", action: "iq.knowledge.retrieve", detail: "3 sources · local-corpus" },
-      { time: "[00:01.03]", action: "orchestrator.delegate", detail: "6 agents · sequential" },
+      { time: "[00:09.41]", action: "orchestrator.plan", detail: "5 selected · 1 skipped (scrum)" },
       { time: "[00:14.20]", action: "debate.open", detail: "buyer-authentication" },
-      { time: "[00:21.77]", action: "vote.tally", detail: "consensus" },
-      { time: "[00:21.90]", action: "consensus.emit", detail: "confidence 0.87" },
-      { time: "[02:47.66]", action: "run.complete", detail: "7 artifacts" },
+      { time: "[01:29.12]", action: "orchestrator.revision", detail: "qa → architect · round 2" },
+      { time: "[02:41.30]", action: "vote.tally", detail: "3 approve / 2 concerns · confidence 0.87" },
+      { time: "[02:42.18]", action: "consensus.emit", detail: "confidence 0.87 (vote-derived)" },
+      { time: "[02:47.66]", action: "run.complete", detail: "5 artifacts" },
     ],
     [
       { ref: "S1", id: "mkt-trust", title: "Marketplace Trust & Safety", source: "Forge KB / Marketplaces", score: 8, snippet: "Identity verification and escrow materially reduce fraud." },
       { ref: "S2", id: "mkt-liquidity", title: "Marketplace Liquidity & Pricing", source: "Forge KB / Marketplaces", score: 6, snippet: "Stripe Connect and Adyen are the standard payment rails for marketplaces." },
       { ref: "S3", id: "gen-security", title: "Application Security Baseline", source: "Forge KB / Engineering", score: 4, snippet: "Authenticate and authorize every API route; never rely on the client." },
-    ]
+    ],
+    {
+      confidence: 0.87,
+      consensus: "Pickup-first marketplace MVP with required authentication, Stripe Connect escrow and a 24h dispute window.",
+      votes: {
+        business: { vote: "approve", confidence: 0.84, concerns: "", round: 1 },
+        pm: { vote: "approve", confidence: 0.82, concerns: "", round: 1 },
+        ux: { vote: "approve_with_concerns", confidence: 0.78, concerns: "Cook onboarding needs identity-verification UX [S1]", round: 1 },
+        architect: { vote: "approve", confidence: 0.85, concerns: "", round: 2 },
+        qa: { vote: "approve_with_concerns", confidence: 0.72, concerns: "Food-safety liability and dispute handling need policy decisions", round: 1 },
+      },
+    }
   )
 
   await s.updateProject(p1.id, { progress: await s.getProjectProgress(p1.id) })

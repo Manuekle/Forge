@@ -1,3 +1,5 @@
+import type { IconSvgElement } from "@/components/ui/icon"
+
 export interface Agent {
   id: AgentType
   label: string
@@ -5,6 +7,7 @@ export interface Agent {
   bgColor: string
   description: string
   capabilities: string[]
+  icon: IconSvgElement
 }
 
 export type AgentType =

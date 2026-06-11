@@ -1,5 +1,6 @@
 import { Card } from "@/components/ui/card"
-import { TrendingUp, TrendingDown } from "lucide-react"
+import { ArrowUp01Icon, ArrowDown01Icon } from "@hugeicons/core-free-icons"
+import { Icon } from "./icon"
 import type { MetricCard as MetricCardType } from "@/types"
 
 interface MetricsCardProps {
@@ -21,7 +22,7 @@ function MetricsCard({ data }: MetricsCardProps) {
         style={{ background: "radial-gradient(circle, #E85002 0%, transparent 70%)" }}
       />
       <div className="relative">
-        <div className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted">{data.label}</div>
+        <div className="text-[11px] font-medium text-muted">{data.label}</div>
         <div
           className="mt-3 text-[34px] font-bold leading-none tracking-tight text-text-primary tabular-nums"
           style={{ fontFamily: "var(--font-syne)" }}
@@ -30,8 +31,8 @@ function MetricsCard({ data }: MetricsCardProps) {
         </div>
         {data.change && (
           <div className={`mt-2.5 flex items-center gap-1 text-xs font-medium ${changeColor}`}>
-            {data.changeType === "positive" && <TrendingUp size={12} />}
-            {data.changeType === "negative" && <TrendingDown size={12} />}
+            {data.changeType === "positive" && <Icon icon={ArrowUp01Icon} size={12} />}
+            {data.changeType === "negative" && <Icon icon={ArrowDown01Icon} size={12} />}
             {data.change}
           </div>
         )}

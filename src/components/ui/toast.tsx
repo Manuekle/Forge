@@ -3,7 +3,8 @@
 import * as React from "react"
 import { createContext, useCallback, useContext, useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { CheckCircle2, AlertCircle, Info, Sparkles, X } from "lucide-react"
+import { CheckmarkCircle01Icon, AlertCircleIcon, InformationCircleIcon, SparklesIcon, Cancel01Icon } from "@hugeicons/core-free-icons"
+import { Icon } from "./icon"
 import { cn } from "@/lib/utils"
 
 type ToastVariant = "default" | "success" | "error" | "info" | "brand"
@@ -28,11 +29,11 @@ export function useToast() {
 }
 
 const iconFor: Record<ToastVariant, React.ReactNode> = {
-  default: <Sparkles size={16} className="text-brand" />,
-  brand: <Sparkles size={16} className="text-brand" />,
-  success: <CheckCircle2 size={16} className="text-success" />,
-  error: <AlertCircle size={16} className="text-error" />,
-  info: <Info size={16} className="text-info" />,
+  default: <Icon icon={SparklesIcon} size={16} className="text-brand" />,
+  brand: <Icon icon={SparklesIcon} size={16} className="text-brand" />,
+  success: <Icon icon={CheckmarkCircle01Icon} size={16} className="text-success" />,
+  error: <Icon icon={AlertCircleIcon} size={16} className="text-error" />,
+  info: <Icon icon={InformationCircleIcon} size={16} className="text-info" />,
 }
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
@@ -80,7 +81,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                   "transition-colors hover:bg-hover-strong hover:text-text-primary"
                 )}
               >
-                <X size={13} />
+                <Icon icon={Cancel01Icon} size={13} />
               </button>
             </motion.div>
           ))}

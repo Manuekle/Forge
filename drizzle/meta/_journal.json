@@ -22,6 +22,20 @@
       "when": 1781162055390,
       "tag": "0002_timestamptz",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1781202428377,
+      "tag": "0003_closed_invisible_woman",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1781202877582,
+      "tag": "0004_married_daimon_hellstrom",
+      "breakpoints": true
     }
   ]
 }

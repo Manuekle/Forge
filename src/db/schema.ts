@@ -66,7 +66,9 @@ export const decisions = pgTable("decisions", {
   confidence: real("confidence"),
   consensus: text("consensus"),
   entries: jsonb("entries").$type<{ agent: string; message: string; timestamp: string }[]>().default([]).notNull(),
-  votes: jsonb("votes").$type<Record<string, string>>().default({}),
+  votes: jsonb("votes")
+    .$type<Record<string, { vote: string; confidence: number | null; concerns: string; round: number }>>()
+    .default({}),
   createdAt: timestamp("created_at", { mode: "date", withTimezone: true }).defaultNow().notNull(),
 })
 
@@ -92,10 +94,44 @@ export const runs = pgTable("runs", {
   progress: text("progress"),
   duration: integer("duration"),
   trace: jsonb("trace").$type<{ time: string; action: string; detail: string }[]>().default([]).notNull(),
+  // Orchestrator execution plan + decision log: which agents were selected /
+  // skipped and why, plus every routing decision made during the run.
+  plan: jsonb("plan").$type<{
+    strategy: string
+    selected: { agent: string; reason: string }[]
+    skipped: { agent: string; reason: string }[]
+    source: string
+    log?: { at: string; type: string; detail: string; reason: string }[]
+  }>(),
   citations: jsonb("citations")
     .$type<{ ref: string; id: string; title: string; source: string; score: number; snippet: string }[]>()
     .default([])
     .notNull(),
+  // Structured execution events emitted live during the run: agent state
+  // transitions, handoffs, votes, checkpoints. Drives the orchestration UI.
+  events: jsonb("events")
+    .$type<
+      {
+        at: string
+        ts: string
+        kind: string
+        agent?: string
+        state?: string
+        detail: string
+        from?: string
+        to?: string
+        summary?: string
+        vote?: string
+        confidence?: number
+      }[]
+    >()
+    .default([])
+    .notNull(),
+  confidence: real("confidence"),
+  votes: jsonb("votes")
+    .$type<Record<string, { vote: string; confidence: number | null; concerns: string; round: number }>>()
+    .default({}),
+  consensus: text("consensus"),
   createdAt: timestamp("created_at", { mode: "date", withTimezone: true }).defaultNow().notNull(),
 })
 

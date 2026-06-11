@@ -3,7 +3,8 @@
 import * as React from "react"
 import * as Dialog from "@radix-ui/react-dialog"
 import { motion, AnimatePresence } from "framer-motion"
-import { X } from "lucide-react"
+import { Cancel01Icon } from "@hugeicons/core-free-icons"
+import { Icon } from "@/components/ui/icon"
 import { cn } from "@/lib/utils"
 
 const overlayVariants = {
@@ -33,7 +34,7 @@ export function Modal({ open, onOpenChange, title, description, children, classN
           <Dialog.Portal forceMount>
             <Dialog.Overlay asChild>
               <motion.div
-                className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md"
+                className="fixed inset-0 z-50 bg-overlay backdrop-blur-md"
                 variants={overlayVariants}
                 initial="hidden"
                 animate="visible"
@@ -68,7 +69,7 @@ export function Modal({ open, onOpenChange, title, description, children, classN
                   </div>
                   <Dialog.Close asChild>
                     <button className="w-8 h-8 rounded-full flex items-center justify-center text-muted hover:text-text-primary hover:bg-hover-strong transition-all duration-200">
-                      <X size={15} />
+                      <Icon icon={Cancel01Icon} size={15} />
                     </button>
                   </Dialog.Close>
                 </div>

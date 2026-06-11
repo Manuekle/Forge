@@ -4,8 +4,9 @@ import { useEffect, useState, useRef } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import { signOut } from "next-auth/react"
 import {
-  LayoutDashboard, FolderKanban, Bot, Settings, ArrowLeft, Plus, Sparkles, LogOut, Menu
-} from "lucide-react"
+  DashboardSquare01Icon, AiFolder01Icon, ChatBotIcon, Settings02Icon, ArrowLeft01Icon, Add01Icon, SparklesIcon, Logout01Icon, Menu01Icon, AiUserIcon
+} from "@hugeicons/core-free-icons"
+import { Icon } from "@/components/ui/icon"
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 import { AGENTS } from "@/lib/constants"
@@ -13,10 +14,10 @@ import type { StoredProject } from "@/lib/store"
 import type { AgentType } from "@/types"
 
 const navItems = [
-  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { label: "Projects", href: "/projects", icon: FolderKanban },
-  { label: "Agents", href: "/agents", icon: Bot },
-  { label: "Settings", href: "/settings", icon: Settings },
+  { label: "Dashboard", href: "/dashboard", icon: DashboardSquare01Icon },
+  { label: "Projects", href: "/projects", icon: AiFolder01Icon },
+  { label: "Agents", href: "/agents", icon: ChatBotIcon },
+  { label: "Settings", href: "/settings", icon: Settings02Icon },
 ]
 
 interface SidebarProps {
@@ -61,13 +62,13 @@ function UserCard() {
         onClick={() => setOpen(!open)}
         className="flex w-full items-center gap-3 rounded-2xl bg-surface-2 p-3 text-left lift-1 transition-colors hover:bg-surface-3"
       >
-        <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full gradient-brand text-[11px] font-bold text-white">
-          DR
+        <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full gradient-brand text-white">
+          <Icon icon={AiUserIcon} size={18} />
         </div>
         <div className="min-w-0 flex-1">
           <div className="truncate text-xs font-medium text-text-primary">Dana Reyes</div>
           <div className="flex items-center gap-1 text-[10px] text-muted">
-            <Sparkles size={10} className="text-brand" />
+            <Icon icon={SparklesIcon} size={10} className="text-brand" />
             Forge Pro
           </div>
         </div>
@@ -78,14 +79,14 @@ function UserCard() {
             onClick={() => { router.push("/settings"); setOpen(false) }}
             className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs text-text-secondary transition-colors hover:bg-surface-3 hover:text-text-primary"
           >
-            <Settings size={14} />
+            <Icon icon={Settings02Icon} size={14} />
             Settings
           </button>
           <button
             onClick={() => signOut({ callbackUrl: "/" })}
             className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs text-text-secondary transition-colors hover:bg-error/12 hover:text-error"
           >
-            <LogOut size={14} />
+            <Icon icon={Logout01Icon} size={14} />
             Sign out
           </button>
         </div>
@@ -129,7 +130,7 @@ export function Sidebar({ projectMode, projectName, projectDescription, projectS
           const isActive =
             pathname === item.href ||
             (item.href === "/dashboard" && pathname === "/")
-          const Icon = item.icon
+          const iconObj = item.icon
           return (
             <button
               key={item.href}
@@ -141,7 +142,7 @@ export function Sidebar({ projectMode, projectName, projectDescription, projectS
                   : "text-text-secondary hover:bg-hover hover:text-text-primary"
               )}
             >
-              <Icon size={17} strokeWidth={isActive ? 2.4 : 1.8} className={isActive ? "text-brand" : "text-muted"} />
+              <Icon icon={iconObj} size={17} strokeWidth={isActive ? 2.4 : 1.8} className={isActive ? "text-brand" : "text-muted"} />
               {item.label}
             </button>
           )
@@ -149,12 +150,12 @@ export function Sidebar({ projectMode, projectName, projectDescription, projectS
       </div>
 
       <div className="flex items-center justify-between px-4 pb-2 pt-7">
-        <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted">Projects</span>
+        <span className="text-[11px] font-medium text-muted">Projects</span>
         <button
           onClick={() => router.push("/projects")}
           className="flex h-5 w-5 items-center justify-center rounded-full text-muted transition-all hover:bg-hover-strong hover:text-text-primary"
         >
-          <Plus size={14} />
+          <Icon icon={Add01Icon} size={14} />
         </button>
       </div>
       <div className="flex flex-1 flex-col gap-0.5 overflow-auto px-1">
@@ -192,7 +193,7 @@ export function Sidebar({ projectMode, projectName, projectDescription, projectS
         onClick={() => setMobileOpen(true)}
         className="fixed left-3 top-3 z-40 flex h-9 w-9 items-center justify-center rounded-full bg-surface-2 lift-1 md:hidden"
       >
-        <Menu size={17} className="text-text-primary" />
+        <Icon icon={Menu01Icon} size={17} className="text-text-primary" />
       </button>
 
       {/* Mobile overlay */}
@@ -235,7 +236,7 @@ function ProjectSidebar({
         onClick={() => { onBack(); setMobileOpen(false) }}
         className="mx-1 mb-2 mt-5 flex items-center gap-1.5 self-start rounded-full px-3 py-1.5 text-xs text-muted transition-colors duration-200 hover:bg-hover hover:text-text-primary"
       >
-        <ArrowLeft size={14} />
+        <Icon icon={ArrowLeft01Icon} size={14} />
         <span>Projects</span>
       </button>
 
@@ -247,7 +248,7 @@ function ProjectSidebar({
         </div>
       </div>
 
-      <div className="px-4 pb-2 pt-6 text-[11px] font-medium uppercase tracking-[0.08em] text-muted">
+      <div className="px-4 pb-2 pt-6 text-[11px] font-medium text-muted">
         AI Team
       </div>
       <div className="flex flex-1 flex-col gap-0.5 overflow-auto px-1">
@@ -258,9 +259,9 @@ function ProjectSidebar({
               key={agentKey}
               className="flex items-center gap-2.5 rounded-full px-3.5 py-2 text-xs text-text-secondary"
             >
-              <span className="flex h-5 w-5 items-center justify-center rounded-[7px] text-[8px] font-bold"
+              <span className="flex h-5 w-5 items-center justify-center rounded-[7px]"
                 style={{ backgroundColor: `${agent.color}1F`, color: agent.color }}>
-                {agentKey === "orchestrator" ? "OR" : agentKey.slice(0, 2).toUpperCase()}
+                <Icon icon={agent.icon} size={11} />
               </span>
               {agent.label}
             </div>
@@ -279,7 +280,7 @@ function ProjectSidebar({
         onClick={() => setMobileOpen(true)}
         className="fixed left-3 top-3 z-40 flex h-9 w-9 items-center justify-center rounded-full bg-surface-2 lift-1 md:hidden"
       >
-        <Menu size={17} className="text-text-primary" />
+        <Icon icon={Menu01Icon} size={17} className="text-text-primary" />
       </button>
 
       {/* Mobile overlay */}

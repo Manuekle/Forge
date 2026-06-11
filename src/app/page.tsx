@@ -3,10 +3,11 @@
 import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import {
-  ArrowRight, ChevronRight, Check, Sparkles, Zap,
-  Layers, GitBranch, Scale, FileText, Shield, TrendingUp,
-  Star, Quote
-} from "lucide-react"
+  ArrowRight01Icon, ChevronRightIcon, Tick01Icon, SparklesIcon, AlgorithmIcon,
+  Layers01Icon, GitBranchIcon, JusticeScale01Icon, File01Icon, Shield01Icon, AnalyticsUpIcon,
+  StarIcon, QuoteUpIcon, AiContentGenerator01Icon, AiIdeaIcon, AiCloud02Icon, AiScanIcon, AiFolder01Icon, AiSearch02Icon
+} from "@hugeicons/core-free-icons"
+import { Icon } from "@/components/ui/icon"
 
 const fadeUp = {
   initial: { opacity: 0, y: 24 },
@@ -18,18 +19,18 @@ const stagger = {
 }
 
 const agents = [
-  { role: "Product Manager", short: "PM", color: "#F97316" },
-  { role: "UX Designer", short: "UX", color: "#FB923C" },
-  { role: "Tech Architect", short: "AR", color: "#FCD34D" },
-  { role: "QA Engineer", short: "QA", color: "#A78BFA" },
-  { role: "Scrum Master", short: "SC", color: "#2ED47A" },
-  { role: "Business Analyst", short: "BA", color: "#4A9FF9" },
+  { role: "Product Manager", short: "PM", color: "#F97316", icon: AiContentGenerator01Icon },
+  { role: "UX Designer", short: "UX", color: "#FB923C", icon: AiIdeaIcon },
+  { role: "Tech Architect", short: "AR", color: "#FCD34D", icon: AiCloud02Icon },
+  { role: "QA Engineer", short: "QA", color: "#A78BFA", icon: AiScanIcon },
+  { role: "Scrum Master", short: "SC", color: "#2ED47A", icon: AiFolder01Icon },
+  { role: "Business Analyst", short: "BA", color: "#4A9FF9", icon: AiSearch02Icon },
 ]
 
 const debateSteps = [
-  { agent: "PM", msg: "Authentication is required — order history depends on identity.", color: "#F97316" },
-  { agent: "AR", msg: "That doubles complexity. Every anonymous flow needs a parallel path.", color: "#FCD34D" },
-  { agent: "QA", msg: "Without auth there's fraud risk and zero traceability.", color: "#A78BFA" },
+  { agent: "PM", msg: "Authentication is required — order history depends on identity.", color: "#F97316", icon: AiContentGenerator01Icon },
+  { agent: "AR", msg: "That doubles complexity. Every anonymous flow needs a parallel path.", color: "#FCD34D", icon: AiCloud02Icon },
+  { agent: "QA", msg: "Without auth there's fraud risk and zero traceability.", color: "#A78BFA", icon: AiScanIcon },
 ]
 
 const rotatingHeadlines = [
@@ -103,7 +104,7 @@ export default function LandingPage() {
         <div className="relative z-10 mx-auto max-w-[1200px] px-6 pb-20 pt-24">
           <motion.div initial="initial" animate="animate" variants={stagger} className="flex flex-col items-center">
             <motion.div variants={fadeUp} className="flex items-center gap-2 rounded-full glass-brand px-4 py-1.5 text-xs font-medium text-brand">
-              <Sparkles size={12} />
+              <Icon icon={SparklesIcon} size={12} />
               Powered by Microsoft Foundry IQ
             </motion.div>
 
@@ -133,13 +134,13 @@ export default function LandingPage() {
               <a href="/dashboard">
                 <button className="btn-brand sheen shadow-brand-lg flex h-12 items-center gap-2 rounded-full px-8 text-sm font-semibold text-white transition-all duration-200 active:scale-[0.97]">
                   Create your first project free
-                  <ArrowRight size={16} />
+                  <Icon icon={ArrowRight01Icon} size={16} />
                 </button>
               </a>
               <a href="#how-it-works">
                 <button className="flex h-12 items-center gap-2 rounded-full bg-surface-2 px-8 text-sm font-medium text-text-primary ring-hair lift-1 transition-all duration-200 hover:bg-surface-3 active:scale-[0.97]">
                   See how it works
-                  <ChevronRight size={16} />
+                  <Icon icon={ChevronRightIcon} size={16} />
                 </button>
               </a>
             </motion.div>
@@ -160,7 +161,7 @@ export default function LandingPage() {
                     >
                       <div className="relative flex h-14 w-14 cursor-default items-center justify-center rounded-full ring-hair sm:h-16 sm:w-16"
                         style={{ background: `linear-gradient(160deg, ${a.color}2E 0%, ${a.color}0D 100%)` }}>
-                        <span className="text-xl font-bold sm:text-2xl" style={{ color: a.color }}>{a.short}</span>
+                        <Icon icon={a.icon} size={24} style={{ color: a.color }} />
                         <span className="absolute -right-1 -top-1 h-3 w-3 rounded-full ring-2 ring-canvas" style={{ backgroundColor: a.color }}>
                           <span className="block h-full w-full animate-ping rounded-full opacity-30" style={{ backgroundColor: a.color }} />
                         </span>
@@ -192,9 +193,9 @@ export default function LandingPage() {
                     transition={{ delay: 1 + i * 0.3 }}
                     className="flex gap-3"
                   >
-                    <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-[9px] text-[10px] font-bold"
+                    <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-[9px]"
                       style={{ backgroundColor: `${step.color}26`, color: step.color }}>
-                      {step.agent}
+                      <Icon icon={step.icon} size={14} />
                     </div>
                     <div className="text-sm leading-relaxed text-text-secondary">{step.msg}</div>
                   </motion.div>
@@ -225,18 +226,18 @@ export default function LandingPage() {
             </motion.h2>
             <div className="mt-14 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {[
-                { icon: Scale, title: "Agent debate", desc: "Every agent challenges the others' assumptions before producing any deliverable." },
-                { icon: GitBranch, title: "Consensus engine", desc: "Contentious decisions are voted on with full traceability and a confidence score." },
-                { icon: Layers, title: "Decision history", desc: "Every consensus is logged with its vote, rationale and metadata." },
-                { icon: FileText, title: "Versioned artifacts", desc: "PRDs, backlogs and architectures with version control on every change." },
-                { icon: Shield, title: "Risk scanner", desc: "QA reviews every plan against security, compliance and fraud risks." },
-                { icon: TrendingUp, title: "Project memory", desc: "Agents remember every prior decision and domain constraint." },
+                { icon: JusticeScale01Icon, title: "Agent debate", desc: "Every agent challenges the others' assumptions before producing any deliverable." },
+                { icon: GitBranchIcon, title: "Consensus engine", desc: "Contentious decisions are voted on with full traceability and a confidence score." },
+                { icon: Layers01Icon, title: "Decision history", desc: "Every consensus is logged with its vote, rationale and metadata." },
+                { icon: File01Icon, title: "Versioned artifacts", desc: "PRDs, backlogs and architectures with version control on every change." },
+                { icon: Shield01Icon, title: "Risk scanner", desc: "QA reviews every plan against security, compliance and fraud risks." },
+                { icon: AnalyticsUpIcon, title: "Project memory", desc: "Agents remember every prior decision and domain constraint." },
               ].map((f, i) => {
-                const Icon = f.icon
+                const iconObj = f.icon
                 return (
                   <motion.div key={i} variants={fadeUp} whileHover={{ y: -4 }} className="group rounded-[var(--radius-card)] bg-surface-2 p-6 ring-hair lift-1 transition-all duration-300 hover:lift-2">
                     <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-full glass-brand transition-transform duration-300 group-hover:scale-105">
-                      <Icon size={18} className="text-brand" />
+                      <Icon icon={iconObj} size={18} className="text-brand" />
                     </div>
                     <h3 className="mb-2 text-base font-semibold text-text-primary">{f.title}</h3>
                     <p className="text-sm leading-relaxed text-text-secondary">{f.desc}</p>
@@ -301,7 +302,7 @@ export default function LandingPage() {
                   <div className="mb-3 flex items-center gap-4">
                     <div className="flex h-12 w-12 items-center justify-center rounded-full ring-hair transition-transform duration-300 group-hover:scale-105"
                       style={{ background: `linear-gradient(160deg, ${a.color}2E 0%, ${a.color}0F 100%)` }}>
-                      <span className="text-xl font-bold" style={{ color: a.color }}>{a.short}</span>
+                      <Icon icon={a.icon} size={20} style={{ color: a.color }} />
                     </div>
                     <div>
                       <div className="text-sm font-semibold text-text-primary">{a.role}</div>
@@ -332,7 +333,7 @@ export default function LandingPage() {
             <motion.div variants={fadeUp}>
               <div className="mb-4 flex items-center gap-3">
                 <div className="flex h-8 w-8 items-center justify-center rounded-full gradient-brand shadow-brand">
-                  <Zap size={16} className="text-white" />
+                  <Icon icon={AlgorithmIcon} size={16} className="text-white" />
                 </div>
                 <span className="text-sm font-semibold text-brand" style={{ fontFamily: "var(--font-syne)" }}>Microsoft Foundry IQ</span>
               </div>
@@ -417,7 +418,7 @@ export default function LandingPage() {
         <div className="mx-auto max-w-[1200px] px-6 py-28">
           <motion.div initial="initial" whileInView="animate" viewport={{ once: true, margin: "-100px" }} variants={stagger}>
             <motion.div variants={fadeUp} className="mb-4 flex items-center justify-center gap-3">
-              <Star size={14} className="fill-brand text-brand" />
+              <Icon icon={StarIcon} size={14} className="fill-brand text-brand" />
               <span className="text-sm font-medium text-brand" style={{ fontFamily: "var(--font-syne)" }}>What our users say</span>
             </motion.div>
             <motion.h2 variants={fadeUp} className="text-center text-4xl font-bold leading-[1.1] sm:text-5xl" style={{ fontFamily: "var(--font-syne)" }}>
@@ -430,7 +431,7 @@ export default function LandingPage() {
                 { quote: "I pitched an idea on Monday and walked into Thursday's review with a full PRD, architecture and backlog.", name: "Rocío A.", role: "PM, enterprise SaaS" },
               ].map((t, i) => (
                 <motion.div key={i} variants={fadeUp} whileHover={{ y: -4 }} className="group flex flex-col rounded-[var(--radius-card)] bg-surface-2 p-6 ring-hair lift-1 transition-all duration-300 hover:lift-2">
-                  <Quote size={20} className="mb-3 text-brand/40" />
+                  <Icon icon={QuoteUpIcon} size={20} className="mb-3 text-brand/40" />
                   <div className="flex-1 text-sm leading-relaxed text-text-secondary">
                     &ldquo;{t.quote}&rdquo;
                   </div>
@@ -492,7 +493,7 @@ export default function LandingPage() {
                   <div className="mt-6 flex flex-1 flex-col gap-2.5 text-sm">
                     {plan.features.map((f) => (
                       <div key={f} className="flex items-center gap-2.5">
-                        <Check size={14} className="flex-shrink-0 text-brand" />
+                        <Icon icon={Tick01Icon} size={14} className="flex-shrink-0 text-brand" />
                         <span className="text-text-secondary">{f}</span>
                       </div>
                     ))}
@@ -518,7 +519,7 @@ export default function LandingPage() {
         <div className="relative mx-auto flex max-w-[1200px] flex-col items-center px-6 py-28">
           <motion.div initial="initial" whileInView="animate" viewport={{ once: true }} variants={stagger} className="flex flex-col items-center">
             <motion.div variants={fadeUp} className="mb-6 flex h-16 w-16 items-center justify-center rounded-[20px] gradient-brand shadow-brand-lg">
-              <Zap size={28} className="text-white" />
+              <Icon icon={AlgorithmIcon} size={28} className="text-white" />
             </motion.div>
             <motion.h2 variants={fadeUp} className="max-w-[700px] text-balance text-center text-4xl font-bold leading-[1.1] sm:text-6xl" style={{ fontFamily: "var(--font-syne)" }}>
               Your AI product team is ready.
@@ -530,7 +531,7 @@ export default function LandingPage() {
               <a href="/dashboard">
                 <button className="btn-brand sheen shadow-brand-lg flex h-14 items-center gap-3 rounded-full px-10 text-base font-semibold text-white transition-all duration-200 active:scale-[0.97]">
                   Create your first project free
-                  <ArrowRight size={18} />
+                  <Icon icon={ArrowRight01Icon} size={18} />
                 </button>
               </a>
             </motion.div>

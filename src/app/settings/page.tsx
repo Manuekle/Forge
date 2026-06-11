@@ -10,8 +10,9 @@ import { Button } from "@/components/ui/button"
 import { useToast } from "@/components/ui/toast"
 import { ThemeToggle } from "@/components/theme-toggle"
 import {
-  Sparkles, Settings as SettingsIcon, User, Building2, Moon, Key, AlertTriangle
-} from "lucide-react"
+  SparklesIcon, Settings02Icon, UserIcon, Building01Icon, MoonIcon, Key01Icon, Alert01Icon
+} from "@hugeicons/core-free-icons"
+import { Icon, type IconSvgElement } from "@/components/ui/icon"
 
 const LS_PROFILE = "forge-profile"
 const LS_WORKSPACE = "forge-workspace"
@@ -67,7 +68,7 @@ export default function SettingsPage() {
       <div className="p-8">
         <div className="mx-auto max-w-[680px]">
           <div className="mb-1 flex items-center gap-3">
-            <SettingsIcon size={20} className="text-brand" />
+            <Icon icon={Settings02Icon} size={20} className="text-brand" />
             <h1 className="text-[28px] font-bold tracking-tight text-text-primary" style={{ fontFamily: "var(--font-syne)" }}>Settings</h1>
           </div>
           <p className="mt-1 text-sm text-text-secondary">
@@ -77,7 +78,7 @@ export default function SettingsPage() {
           <div className="mt-8 flex flex-col gap-5">
             {/* Profile */}
             <Section delay={0}>
-              <SectionHeader icon={User} title="Profile" />
+              <SectionHeader icon={UserIcon} title="Profile" />
               <div className="flex flex-col gap-4">
                 <Field label="Full name">
                   <Input value={profile.name} onChange={(e) => setProfile({ ...profile, name: e.target.value })} type="text" />
@@ -91,7 +92,7 @@ export default function SettingsPage() {
 
             {/* Workspace */}
             <Section delay={1}>
-              <SectionHeader icon={Building2} title="Workspace" />
+              <SectionHeader icon={Building01Icon} title="Workspace" />
               <div className="flex flex-col gap-4">
                 <Field label="Workspace name">
                   <Input value={workspace.name} onChange={(e) => setWorkspace({ name: e.target.value })} type="text" />
@@ -105,7 +106,7 @@ export default function SettingsPage() {
 
             {/* Appearance */}
             <Section delay={2}>
-              <SectionHeader icon={Moon} title="Appearance" />
+              <SectionHeader icon={MoonIcon} title="Appearance" />
               <div className="flex items-center justify-between">
                 <div>
                   <div className="text-sm font-medium text-text-primary">Theme</div>
@@ -117,7 +118,7 @@ export default function SettingsPage() {
 
             {/* API Configuration */}
             <Section delay={3}>
-              <SectionHeader icon={Key} title="API Configuration" />
+              <SectionHeader icon={Key01Icon} title="API Configuration" />
               <div className="flex flex-col gap-4">
                 <Field label="Azure OpenAI Endpoint">
                   <Input value={api.endpoint} onChange={(e) => setApi({ ...api, endpoint: e.target.value })} type="text" placeholder="https://your-resource.openai.azure.com" />
@@ -138,7 +139,7 @@ export default function SettingsPage() {
             {/* Danger Zone */}
             <Section delay={4}>
               <div className="flex items-center gap-3 rounded-xl bg-error/8 p-4">
-                <AlertTriangle size={18} className="text-error" />
+                <Icon icon={Alert01Icon} size={18} className="text-error" />
                 <div className="flex-1">
                   <div className="text-sm font-medium text-error">Danger Zone</div>
                   <div className="mt-0.5 text-xs text-text-secondary">
@@ -173,11 +174,11 @@ function Section({ delay, children }: { delay: number; children: React.ReactNode
   )
 }
 
-function SectionHeader({ icon: Icon, title }: { icon: React.ComponentType<{ size?: number; className?: string }>; title: string }) {
+function SectionHeader({ icon, title }: { icon: IconSvgElement; title: string }) {
   return (
     <div className="mb-5 flex items-center gap-3">
       <div className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-subtle ring-hair">
-        <Icon size={16} className="text-brand" />
+        <Icon icon={icon} size={16} className="text-brand" />
       </div>
       <h2 className="text-sm font-semibold text-text-primary" style={{ fontFamily: "var(--font-syne)" }}>{title}</h2>
     </div>
@@ -197,7 +198,7 @@ function SectionFooter({ onSave }: { onSave?: () => void }) {
   return (
     <div className="mt-6 flex justify-end pt-5 hairline-t">
       <Button size="sm" onClick={onSave}>
-        <Sparkles size={13} />
+        <Icon icon={SparklesIcon} size={13} />
         Save changes
       </Button>
     </div>

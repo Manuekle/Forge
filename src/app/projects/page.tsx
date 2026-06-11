@@ -15,7 +15,8 @@ import { CreateProjectModal } from "@/components/shared/create-project-modal"
 import { AGENTS } from "@/lib/constants"
 import { cn } from "@/lib/utils"
 import type { StoredProject } from "@/lib/store"
-import { Search, Sparkles, Clock, ArrowRight, FolderKanban } from "lucide-react"
+import { AiSearch02Icon, SparklesIcon, Clock01Icon, ArrowRight01Icon, FolderKanbanIcon } from "@hugeicons/core-free-icons"
+import { Icon } from "@/components/ui/icon"
 
 const filters = [
   { label: "All", value: "" },
@@ -79,7 +80,7 @@ export default function ProjectsPage() {
                 placeholder="Search projects…"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                icon={<Search size={15} />}
+                icon={<Icon icon={AiSearch02Icon} size={15} />}
               />
             </div>
             <div className="flex flex-wrap gap-1.5 rounded-full bg-surface-inset p-1 ring-hair">
@@ -100,7 +101,7 @@ export default function ProjectsPage() {
             </div>
             <div className="flex-1" />
             <Button size="sm" onClick={() => setShowCreate(true)}>
-              <Sparkles size={14} />
+              <Icon icon={SparklesIcon} size={14} />
               Create project
             </Button>
           </div>
@@ -143,7 +144,7 @@ export default function ProjectsPage() {
                           </div>
                           <p className="mt-1 line-clamp-1 text-xs leading-relaxed text-text-secondary">{p.description}</p>
                         </div>
-                        <ArrowRight size={15} className="flex-shrink-0 text-muted transition-all duration-200 group-hover:translate-x-0.5 group-hover:text-brand" />
+                        <Icon icon={ArrowRight01Icon} size={15} className="flex-shrink-0 text-muted transition-all duration-200 group-hover:translate-x-0.5 group-hover:text-brand" />
                       </div>
                       <div className="mt-4 flex items-center gap-3">
                         <div className="flex">
@@ -157,7 +158,7 @@ export default function ProjectsPage() {
                           </div>
                         </div>
                         <span className="flex items-center gap-1 text-[11px] text-muted">
-                          <Clock size={11} />
+                          <Icon icon={Clock01Icon} size={11} />
                           {Math.floor(p.progress / 10)} artifacts · {(p as StoredProject & { _ago?: number })._ago ?? 0}m
                         </span>
                       </div>
@@ -173,14 +174,14 @@ export default function ProjectsPage() {
           ) : (
             <Card variant="inset" className="mt-8 flex flex-col items-center px-10 py-16 text-center">
               <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-[20px] glass-brand">
-                <FolderKanban size={26} className="text-brand" />
+                <Icon icon={FolderKanbanIcon} size={26} className="text-brand" />
               </div>
               <h3 className="text-base font-semibold text-text-primary" style={{ fontFamily: "var(--font-syne)" }}>No projects yet</h3>
               <p className="mt-2 max-w-[460px] text-sm text-text-secondary">
                 Start from a template or create a project manually — the AI team takes it from there.
               </p>
               <Button className="mt-5" onClick={() => setShowCreate(true)}>
-                <Sparkles size={15} />
+                <Icon icon={SparklesIcon} size={15} />
                 Create your first project
               </Button>
             </Card>

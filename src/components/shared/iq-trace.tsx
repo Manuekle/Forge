@@ -1,4 +1,5 @@
-import { Zap } from "lucide-react"
+import { FlashIcon } from "@hugeicons/core-free-icons"
+import { Icon } from "@/components/ui/icon"
 
 interface IqTraceProps {
   className?: string
@@ -23,7 +24,7 @@ export function IqTrace({ className }: IqTraceProps) {
       <div className="relative">
         <div className="mb-5 flex items-center gap-2">
           <div className="flex h-6 w-6 items-center justify-center rounded-full gradient-brand glow-brand">
-            <Zap size={12} className="text-white" />
+            <Icon icon={FlashIcon} size={12} className="text-white" />
           </div>
           <span className="font-mono text-xs text-text-secondary">Foundry IQ Trace — Run</span>
         </div>
