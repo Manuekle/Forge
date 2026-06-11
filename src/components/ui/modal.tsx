@@ -54,34 +54,24 @@ export function Modal({ open, onOpenChange, title, description, children, classN
                 exit="hidden"
                 transition={{ duration: 0.2, type: "spring", stiffness: 300, damping: 25 }}
               >
-                {(title || description) && (
-                  <div className="flex items-start justify-between px-7 pt-7 pb-2">
-                    <div>
-                      {title && (
-                        <Dialog.Title className="text-lg font-semibold tracking-tight text-text-primary" style={{ fontFamily: "var(--font-syne)" }}>
-                          {title}
-                        </Dialog.Title>
-                      )}
-                      {description && (
-                        <Dialog.Description className="text-sm text-text-secondary mt-1.5 leading-relaxed">
-                          {description}
-                        </Dialog.Description>
-                      )}
-                    </div>
-                    <Dialog.Close asChild>
-                      <button className="w-8 h-8 rounded-full flex items-center justify-center text-muted hover:text-text-primary hover:bg-white/[0.06] transition-all duration-200">
-                        <X size={15} />
-                      </button>
-                    </Dialog.Close>
-                  </div>
+                <Dialog.Title className="sr-only">{title || "Dialog"}</Dialog.Title>
+                {description && (
+                  <Dialog.Description className="sr-only">{description}</Dialog.Description>
                 )}
-                {!title && !description && (
+                <div className="flex items-start justify-between px-7 pt-7 pb-2">
+                  <div>
+                    {title && (
+                      <span className="text-lg font-semibold tracking-tight text-text-primary" style={{ fontFamily: "var(--font-syne)" }}>
+                        {title}
+                      </span>
+                    )}
+                  </div>
                   <Dialog.Close asChild>
-                    <button className="absolute top-4 right-4 w-8 h-8 rounded-full flex items-center justify-center text-muted hover:text-text-primary hover:bg-white/[0.06] transition-all duration-200 z-10">
+                    <button className="w-8 h-8 rounded-full flex items-center justify-center text-muted hover:text-text-primary hover:bg-white/[0.06] transition-all duration-200">
                       <X size={15} />
                     </button>
                   </Dialog.Close>
-                )}
+                </div>
                 <div className="px-7 pb-7 pt-4">{children}</div>
               </motion.div>
             </Dialog.Content>

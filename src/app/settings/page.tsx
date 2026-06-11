@@ -1,11 +1,14 @@
 "use client"
 
 import { useState } from "react"
+
 import { motion } from "framer-motion"
+import { signOut } from "next-auth/react"
 import { Shell } from "@/components/layout/shell"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+import { useToast } from "@/components/ui/toast"
 import {
   Sparkles, Settings as SettingsIcon, User, Building2, Moon, Sun, Key, AlertTriangle
 } from "lucide-react"
@@ -24,8 +27,55 @@ function useTheme() {
   return { theme, toggle }
 }
 
+const LS_PROFILE = "forge-profile"
+const LS_WORKSPACE = "forge-workspace"
+const LS_API = "forge-api"
+
+function load<T>(key: string, fallback: T): T {
+  if (typeof window === "undefined") return fallback
+  try { return JSON.parse(localStorage.getItem(key) || "null") ?? fallback } catch { return fallback }
+}
+
 export default function SettingsPage() {
+  const { toast } = useToast()
   const { theme, toggle } = useTheme()
+
+  const [profile, setProfile] = useState(() => load(LS_PROFILE, { name: "Dana Reyes", email: "dana@forge.dev" }))
+  const [workspace, setWorkspace] = useState(() => load(LS_WORKSPACE, { name: "Forge Team" }))
+  const [api, setApi] = useState(() => load(LS_API, { endpoint: "", key: "", deployment: "grok-4-20-reasoning", timeout: "180000" }))
+  const [deleting, setDeleting] = useState(false)
+
+  function saveProfile() {
+    localStorage.setItem(LS_PROFILE, JSON.stringify(profile))
+    toast({ title: "Profile saved", variant: "success" })
+  }
+
+  function saveWorkspace() {
+    localStorage.setItem(LS_WORKSPACE, JSON.stringify(workspace))
+    toast({ title: "Workspace saved", variant: "success" })
+  }
+
+  function saveApi() {
+    localStorage.setItem(LS_API, JSON.stringify(api))
+    toast({ title: "API configuration saved", description: "Restart the server for changes to take effect.", variant: "info" })
+  }
+
+  async function deleteAccount() {
+    if (!confirm("Are you sure you want to delete your account? This cannot be undone.")) return
+    setDeleting(true)
+    try {
+      const res = await fetch("/api/clear", { method: "POST" })
+      if (res.ok) {
+        toast({ title: "Account deleted", variant: "info" })
+        signOut({ callbackUrl: "/" })
+      } else {
+        toast({ title: "Delete failed", variant: "error" })
+      }
+    } catch {
+      toast({ title: "Delete failed", variant: "error" })
+    }
+    setDeleting(false)
+  }
 
   return (
     <Shell breadcrumb="Settings">
@@ -45,13 +95,13 @@ export default function SettingsPage() {
               <SectionHeader icon={User} title="Profile" />
               <div className="flex flex-col gap-4">
                 <Field label="Full name">
-                  <Input defaultValue="Dana Reyes" type="text" />
+                  <Input value={profile.name} onChange={(e) => setProfile({ ...profile, name: e.target.value })} type="text" />
                 </Field>
                 <Field label="Email">
-                  <Input defaultValue="dana@forge.dev" type="email" />
+                  <Input value={profile.email} onChange={(e) => setProfile({ ...profile, email: e.target.value })} type="email" />
                 </Field>
               </div>
-              <SectionFooter />
+              <SectionFooter onSave={saveProfile} />
             </Section>
 
             {/* Workspace */}
@@ -59,13 +109,13 @@ export default function SettingsPage() {
               <SectionHeader icon={Building2} title="Workspace" />
               <div className="flex flex-col gap-4">
                 <Field label="Workspace name">
-                  <Input defaultValue="Forge Team" type="text" />
+                  <Input value={workspace.name} onChange={(e) => setWorkspace({ name: e.target.value })} type="text" />
                 </Field>
                 <Field label="Plan">
                   <Input defaultValue="Forge Pro" type="text" className="text-brand" readOnly />
                 </Field>
               </div>
-              <SectionFooter />
+              <SectionFooter onSave={saveWorkspace} />
             </Section>
 
             {/* Appearance */}
@@ -94,19 +144,19 @@ export default function SettingsPage() {
               <SectionHeader icon={Key} title="API Configuration" />
               <div className="flex flex-col gap-4">
                 <Field label="Azure OpenAI Endpoint">
-                  <Input defaultValue={process.env.NEXT_PUBLIC_AZURE_ENDPOINT || ""} type="text" placeholder="https://your-resource.openai.azure.com" />
+                  <Input value={api.endpoint} onChange={(e) => setApi({ ...api, endpoint: e.target.value })} type="text" placeholder="https://your-resource.openai.azure.com" />
                 </Field>
                 <Field label="API Key">
-                  <Input type="password" placeholder="sk-..." />
+                  <Input value={api.key} onChange={(e) => setApi({ ...api, key: e.target.value })} type="password" placeholder="sk-..." />
                 </Field>
                 <Field label="Deployment Name">
-                  <Input defaultValue="grok-4-20-reasoning" type="text" />
+                  <Input value={api.deployment} onChange={(e) => setApi({ ...api, deployment: e.target.value })} type="text" />
                 </Field>
                 <Field label="Timeout (ms)">
-                  <Input defaultValue="180000" type="number" />
+                  <Input value={api.timeout} onChange={(e) => setApi({ ...api, timeout: e.target.value })} type="number" />
                 </Field>
               </div>
-              <SectionFooter />
+              <SectionFooter onSave={saveApi} />
             </Section>
 
             {/* Danger Zone */}
@@ -119,8 +169,8 @@ export default function SettingsPage() {
                     Permanently delete your account and all associated data. This action cannot be undone.
                   </div>
                 </div>
-                <Button variant="outline" size="sm" className="border-error/30 text-error hover:bg-error/12">
-                  Delete account
+                <Button variant="outline" size="sm" className="border-error/30 text-error hover:bg-error/12" onClick={deleteAccount} disabled={deleting}>
+                  {deleting ? "Deleting…" : "Delete account"}
                 </Button>
               </div>
             </Section>
@@ -165,10 +215,10 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   )
 }
 
-function SectionFooter() {
+function SectionFooter({ onSave }: { onSave?: () => void }) {
   return (
     <div className="mt-6 flex justify-end pt-5 hairline-t">
-      <Button size="sm">
+      <Button size="sm" onClick={onSave}>
         <Sparkles size={13} />
         Save changes
       </Button>

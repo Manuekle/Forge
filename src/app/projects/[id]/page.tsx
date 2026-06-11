@@ -68,7 +68,7 @@ function ProjectPageInner({ projectId }: { projectId: string }) {
   const [showExport, setShowExport] = useState(false)
   const [selectedVersion, setSelectedVersion] = useState(1)
 
-  function load() {
+  function load(onLoaded?: (artifacts: StoredArtifact[]) => void) {
     Promise.all([
       fetch(`/api/projects/${projectId}`).then((r) => (r.ok ? r.json() : null)),
       fetch(`/api/projects/${projectId}/decisions`).then((r) => (r.ok ? r.json() : [])),
@@ -79,8 +79,10 @@ function ProjectPageInner({ projectId }: { projectId: string }) {
         // Endpoints can return a non-array error object on 401/404 — coerce.
         setProject(p && !p.error ? p : null)
         setDecisions(Array.isArray(d) ? d : [])
-        setArtifacts(Array.isArray(a) ? a : [])
+        const fresh = Array.isArray(a) ? a : []
+        setArtifacts(fresh)
         setRuns(Array.isArray(r) ? r : [])
+        onLoaded?.(fresh)
       })
       .catch(() => {
         setProject(null)
@@ -111,9 +113,14 @@ function ProjectPageInner({ projectId }: { projectId: string }) {
         if (!latest) return
         if (latest.status === "completed") {
           clearInterval(poll)
-          load()
           setRunning(false)
           setRunProgress([])
+          load((fresh) => {
+            const latestOfType = fresh
+              .filter((a) => a.type.toLowerCase() === activeDeliverable.toLowerCase())
+              .sort((a, b) => b.version - a.version)[0]
+            if (latestOfType) setSelectedVersion(latestOfType.version)
+          })
           toast({ title: "Run complete", description: "Agents reached consensus and generated deliverables.", variant: "success" })
           return
         }
