@@ -16,7 +16,7 @@ let _db: PostgresJsDatabase<typeof schema> | null = null
 export function getDb(): PostgresJsDatabase<typeof schema> {
   if (!dbEnabled) throw new Error("Database is not enabled (set STORE_DRIVER=postgres)")
   if (!_db) {
-    const client = postgres(process.env.DATABASE_URL!, { max: 5 })
+    const client = postgres(process.env.DATABASE_URL!, { max: 5, prepare: false })
     _db = drizzle(client, { schema })
   }
   return _db
