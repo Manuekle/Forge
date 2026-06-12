@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { store } from "@/lib/store"
 import { requireProjectAccess } from "@/lib/api-auth"
 import { clampText, safeJson } from "@/lib/guard"
+import { parseRepoUrl } from "@/lib/github"
 
 export async function GET(
   _request: Request,
@@ -13,7 +14,7 @@ export async function GET(
   return NextResponse.json(access.project)
 }
 
-const ALLOWED_STATUS = new Set(["active", "planning", "in_review", "archived"])
+const ALLOWED_STATUS = new Set(["active", "planning", "in_review", "approved", "archived"])
 
 export async function PATCH(
   request: Request,
@@ -30,6 +31,18 @@ export async function PATCH(
   if (body.description !== undefined) patch.description = clampText(body.description, 2000)
   if (typeof body.status === "string" && ALLOWED_STATUS.has(body.status)) patch.status = body.status
   if (typeof body.progress === "number") patch.progress = Math.min(100, Math.max(0, body.progress))
+  if (typeof body.githubRepo === "string") {
+    const trimmed = body.githubRepo.trim()
+    if (!trimmed) {
+      patch.githubRepo = null
+    } else {
+      const parsed = parseRepoUrl(trimmed)
+      if (!parsed) {
+        return NextResponse.json({ error: "Invalid repository. Use https://github.com/owner/repo or owner/repo." }, { status: 400 })
+      }
+      patch.githubRepo = `https://github.com/${parsed.owner}/${parsed.repo}`
+    }
+  }
 
   const updated = await store.updateProject(id, patch)
   return NextResponse.json(updated)

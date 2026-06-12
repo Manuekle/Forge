@@ -4,8 +4,9 @@ import { useEffect, useState, useRef } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import Image from "next/image"
 import { signOut } from "next-auth/react"
+import { motion, AnimatePresence } from "framer-motion"
 import {
-  DashboardSquare01Icon, AiFolder01Icon, ChatBotIcon, Settings02Icon, ArrowLeft01Icon, Add01Icon, SparklesIcon, Logout01Icon, Menu01Icon, AiUserIcon, ArrowUp01Icon, Tick01Icon, Edit01Icon
+  DashboardSquare01Icon, AiFolder01Icon, ChatBotIcon, Settings02Icon, ArrowLeft01Icon, Add01Icon, SparklesIcon, Logout01Icon, Menu01Icon, AiUserIcon, ArrowUp01Icon, Tick01Icon, Edit01Icon, Cancel01Icon
 } from "@hugeicons/core-free-icons"
 import { Icon } from "@/components/ui/icon"
 import { cn } from "@/lib/utils"
@@ -30,6 +31,57 @@ interface SidebarProps {
   projectStatus?: string
   onBack?: () => void
   onEditProject?: () => void
+}
+
+function MobileNav({
+  open, onOpenChange, children,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  children: React.ReactNode
+}) {
+  return (
+    <>
+      <button
+        onClick={() => onOpenChange(true)}
+        aria-label="Open menu"
+        className="fixed left-3 top-3.5 z-40 flex h-9 w-9 items-center justify-center rounded-full bg-surface-2 ring-hair lift-1 md:hidden"
+      >
+        <Icon icon={Menu01Icon} size={17} className="text-text-primary" />
+      </button>
+
+      <AnimatePresence>
+        {open && (
+          <div className="fixed inset-0 z-[70] md:hidden">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.18 }}
+              className="absolute inset-0 bg-overlay backdrop-blur-sm"
+              onClick={() => onOpenChange(false)}
+            />
+            <motion.div
+              initial={{ x: -280 }}
+              animate={{ x: 0 }}
+              exit={{ x: -280 }}
+              transition={{ type: "spring", stiffness: 380, damping: 36 }}
+              className="absolute inset-y-0 left-0 flex w-[264px] flex-col overflow-y-auto bg-canvas shadow-pop"
+            >
+              <button
+                onClick={() => onOpenChange(false)}
+                aria-label="Close menu"
+                className="absolute right-2.5 top-5 z-10 flex h-8 w-8 items-center justify-center rounded-full text-muted transition-colors hover:bg-hover-strong hover:text-text-primary"
+              >
+                <Icon icon={Cancel01Icon} size={15} />
+              </button>
+              {children}
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+    </>
+  )
 }
 
 function Logo() {
@@ -188,7 +240,7 @@ export function Sidebar({ projectMode, projectName, projectDescription, projectS
           >
             <span className={cn(
               "h-1.5 w-1.5 flex-shrink-0 rounded-full",
-              p.status === "active" ? "bg-success" : p.status === "planning" ? "bg-info" : p.status === "in_review" ? "bg-warning" : "bg-muted"
+              p.status === "active" ? "bg-success" : p.status === "planning" ? "bg-info" : p.status === "in_review" ? "bg-warning" : p.status === "approved" ? "bg-brand" : "bg-muted"
             )} />
             <span className="truncate">{p.name}</span>
           </button>
@@ -204,23 +256,9 @@ export function Sidebar({ projectMode, projectName, projectDescription, projectS
 
   return (
     <>
-      {/* Mobile menu button */}
-      <button
-        onClick={() => setMobileOpen(true)}
-        className="fixed left-3 top-3 z-40 flex h-9 w-9 items-center justify-center rounded-full bg-surface-2 lift-1 md:hidden"
-      >
-        <Icon icon={Menu01Icon} size={17} className="text-text-primary" />
-      </button>
-
-      {/* Mobile overlay */}
-      {mobileOpen && (
-        <div className="fixed inset-0 z-40 flex md:hidden">
-          <div className="flex-1 bg-black/50" onClick={() => setMobileOpen(false)} />
-          <div className="flex w-[240px] flex-shrink-0 flex-col bg-canvas">
-            {content}
-          </div>
-        </div>
-      )}
+      <MobileNav open={mobileOpen} onOpenChange={setMobileOpen}>
+        {content}
+      </MobileNav>
 
       {/* Desktop sidebar */}
       <div className="hidden w-[240px] flex-shrink-0 flex-col md:flex">
@@ -309,7 +347,7 @@ function ProjectSidebar({
   onEditProject?: () => void
 }) {
   const statusVariant =
-    status === "active" ? "active" : status === "in_review" ? "in_review" : status === "archived" ? "archived" : "planning"
+    status === "active" ? "active" : status === "in_review" ? "in_review" : status === "approved" ? "approved" : status === "archived" ? "archived" : "planning"
   const [mobileOpen, setMobileOpen] = useState(false)
 
   const content = (
@@ -369,23 +407,9 @@ function ProjectSidebar({
 
   return (
     <>
-      {/* Mobile menu button */}
-      <button
-        onClick={() => setMobileOpen(true)}
-        className="fixed left-3 top-3 z-40 flex h-9 w-9 items-center justify-center rounded-full bg-surface-2 lift-1 md:hidden"
-      >
-        <Icon icon={Menu01Icon} size={17} className="text-text-primary" />
-      </button>
-
-      {/* Mobile overlay */}
-      {mobileOpen && (
-        <div className="fixed inset-0 z-40 flex md:hidden">
-          <div className="flex-1 bg-black/50" onClick={() => setMobileOpen(false)} />
-          <div className="flex w-[240px] flex-shrink-0 flex-col bg-canvas">
-            {content}
-          </div>
-        </div>
-      )}
+      <MobileNav open={mobileOpen} onOpenChange={setMobileOpen}>
+        {content}
+      </MobileNav>
 
       {/* Desktop sidebar */}
       <div className="hidden w-[240px] flex-shrink-0 flex-col md:flex">

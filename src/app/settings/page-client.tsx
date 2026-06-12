@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { signOut } from "next-auth/react"
 import { Shell } from "@/components/layout/shell"
@@ -9,8 +9,10 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/components/ui/toast"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { Modal } from "@/components/ui/modal"
 import {
-  SparklesIcon, UserIcon, Building01Icon, MoonIcon, Key01Icon, Alert01Icon,
+  SparklesIcon, UserIcon, Building01Icon, MoonIcon, Key01Icon, Alert01Icon, GlobeIcon, HelpCircleIcon,
+  GitBranchIcon, Layers01Icon,
 } from "@hugeicons/core-free-icons"
 import { Icon, type IconSvgElement } from "@/components/ui/icon"
 
@@ -39,7 +41,28 @@ export default function SettingsPage() {
   const [profile, setProfile] = useState(() => load(LS_PROFILE, { name: "Jane Doe", email: "jane@forge.dev" }))
   const [workspace, setWorkspace] = useState(() => load(LS_WORKSPACE, { name: "Forge Team" }))
   const [api, setApi] = useState(() => load(LS_API, { endpoint: "", key: "", deployment: "grok-4-20-reasoning", timeout: "180000" }))
+  const [githubToken, setGithubToken] = useState("")
+  const [savingGithub, setSavingGithub] = useState(false)
+  const [jira, setJira] = useState({ domain: "", email: "", token: "" })
+  const [savingJira, setSavingJira] = useState(false)
+  const [linearToken, setLinearToken] = useState("")
+  const [savingLinear, setSavingLinear] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [showScopeGuide, setShowScopeGuide] = useState(false)
+
+  useEffect(() => {
+    fetch("/api/user/settings")
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => {
+        if (!data) return
+        if (data.githubToken) setGithubToken(data.githubToken)
+        if (data.jiraDomain || data.jiraEmail || data.jiraToken) {
+          setJira({ domain: data.jiraDomain ?? "", email: data.jiraEmail ?? "", token: data.jiraToken ?? "" })
+        }
+        if (data.linearToken) setLinearToken(data.linearToken)
+      })
+      .catch(() => {})
+  }, [])
 
   function saveProfile() {
     localStorage.setItem(LS_PROFILE, JSON.stringify(profile))
@@ -54,6 +77,51 @@ export default function SettingsPage() {
   function saveApi() {
     localStorage.setItem(LS_API, JSON.stringify(api))
     toast({ title: "API configuration saved", description: "Restart the server for changes to take effect.", variant: "info" })
+  }
+
+  async function saveGithub() {
+    setSavingGithub(true)
+    const res = await fetch("/api/user/settings", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ githubToken: githubToken || null }),
+    })
+    if (res.ok) {
+      toast({ title: "GitHub token saved", variant: "success" })
+    } else {
+      toast({ title: "Failed to save token", variant: "error" })
+    }
+    setSavingGithub(false)
+  }
+
+  async function saveJira() {
+    setSavingJira(true)
+    const res = await fetch("/api/user/settings", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ jiraDomain: jira.domain, jiraEmail: jira.email, jiraToken: jira.token }),
+    })
+    if (res.ok) {
+      toast({ title: "Jira configuration saved", variant: "success" })
+    } else {
+      toast({ title: "Failed to save Jira configuration", variant: "error" })
+    }
+    setSavingJira(false)
+  }
+
+  async function saveLinear() {
+    setSavingLinear(true)
+    const res = await fetch("/api/user/settings", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ linearToken: linearToken || null }),
+    })
+    if (res.ok) {
+      toast({ title: "Linear API key saved", variant: "success" })
+    } else {
+      toast({ title: "Failed to save Linear API key", variant: "error" })
+    }
+    setSavingLinear(false)
   }
 
   async function deleteAccount() {
@@ -171,6 +239,107 @@ export default function SettingsPage() {
                 </Card>
               </motion.div>
 
+              {/* GitHub Integration */}
+              <motion.div variants={fadeUp}>
+                <Card variant="elevated" className="relative overflow-hidden p-6">
+                  <div className="pointer-events-none absolute -right-12 -top-12 h-24 w-24 rounded-full opacity-[0.05] blur-2xl"
+                    style={{ background: "radial-gradient(circle, #E85002 0%, transparent 70%)" }}
+                  />
+                  <div className="mb-5 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-6 w-6 items-center justify-center rounded-lg glass-brand">
+                        <Icon icon={GlobeIcon} size={13} className="text-brand" />
+                      </div>
+                      <h2 className="text-sm font-semibold text-text-primary" style={{ fontFamily: "var(--font-syne)" }}>GitHub Integration</h2>
+                    </div>
+                    <button onClick={() => setShowScopeGuide(true)} className="flex h-6 w-6 items-center justify-center rounded-full text-muted hover:text-text-primary hover:bg-hover-strong transition-all duration-200" title="Which scopes to select?">
+                      <Icon icon={HelpCircleIcon} size={15} />
+                    </button>
+                  </div>
+                  <div className="flex flex-col gap-4">
+                    <Field label="Personal Access Token (classic)">
+                      <Input
+                        value={githubToken}
+                        onChange={(e) => setGithubToken(e.target.value)}
+                        type="password"
+                        placeholder="ghp_..."
+                      />
+                    </Field>
+                    <p className="text-xs text-text-secondary leading-relaxed">
+                      Needs <code className="rounded bg-surface-inset px-1.5 py-0.5 font-mono text-[11px]">repo</code> scope. 
+                      Create one in <a href="https://github.com/settings/tokens" target="_blank" rel="noopener noreferrer" className="text-brand underline">GitHub Settings → Tokens</a>.
+                    </p>
+                  </div>
+                  <SectionFooter onSave={saveGithub} loading={savingGithub} />
+                </Card>
+              </motion.div>
+
+              {/* Jira Integration */}
+              <motion.div variants={fadeUp}>
+                <Card variant="elevated" className="relative overflow-hidden p-6">
+                  <div className="pointer-events-none absolute -right-12 -top-12 h-24 w-24 rounded-full opacity-[0.05] blur-2xl"
+                    style={{ background: "radial-gradient(circle, #E85002 0%, transparent 70%)" }}
+                  />
+                  <SectionHeader icon={GitBranchIcon} title="Jira Integration" />
+                  <div className="flex flex-col gap-4">
+                    <Field label="Jira domain">
+                      <Input
+                        value={jira.domain}
+                        onChange={(e) => setJira({ ...jira, domain: e.target.value })}
+                        type="text"
+                        placeholder="forge"
+                      />
+                    </Field>
+                    <Field label="Account email">
+                      <Input
+                        value={jira.email}
+                        onChange={(e) => setJira({ ...jira, email: e.target.value })}
+                        type="email"
+                        placeholder="you@company.com"
+                      />
+                    </Field>
+                    <Field label="API token">
+                      <Input
+                        value={jira.token}
+                        onChange={(e) => setJira({ ...jira, token: e.target.value })}
+                        type="password"
+                        placeholder="ATATT..."
+                      />
+                    </Field>
+                    <p className="text-xs text-text-secondary leading-relaxed">
+                      Your domain is the subdomain in <code className="rounded bg-surface-inset px-1.5 py-0.5 font-mono text-[11px]">https://&lt;domain&gt;.atlassian.net</code>.
+                      Create a token in <a href="https://id.atlassian.com/manage-profile/security/api-tokens" target="_blank" rel="noopener noreferrer" className="text-brand underline">Atlassian Account → API tokens</a>.
+                    </p>
+                  </div>
+                  <SectionFooter onSave={saveJira} loading={savingJira} />
+                </Card>
+              </motion.div>
+
+              {/* Linear Integration */}
+              <motion.div variants={fadeUp}>
+                <Card variant="elevated" className="relative overflow-hidden p-6">
+                  <div className="pointer-events-none absolute -right-12 -top-12 h-24 w-24 rounded-full opacity-[0.05] blur-2xl"
+                    style={{ background: "radial-gradient(circle, #E85002 0%, transparent 70%)" }}
+                  />
+                  <SectionHeader icon={Layers01Icon} title="Linear Integration" />
+                  <div className="flex flex-col gap-4">
+                    <Field label="Personal API key">
+                      <Input
+                        value={linearToken}
+                        onChange={(e) => setLinearToken(e.target.value)}
+                        type="password"
+                        placeholder="lin_api_..."
+                      />
+                    </Field>
+                    <p className="text-xs text-text-secondary leading-relaxed">
+                      Create one in <a href="https://linear.app/settings/account/security" target="_blank" rel="noopener noreferrer" className="text-brand underline">Linear Settings → Security & access → Personal API keys</a>.
+                      Issues are created in your first team.
+                    </p>
+                  </div>
+                  <SectionFooter onSave={saveLinear} loading={savingLinear} />
+                </Card>
+              </motion.div>
+
               {/* Danger Zone */}
               <motion.div variants={fadeUp}>
                 <Card variant="elevated" className="relative overflow-hidden border border-error/10 p-6">
@@ -197,6 +366,28 @@ export default function SettingsPage() {
           </div>
         </div>
       </div>
+
+      <Modal open={showScopeGuide} onOpenChange={setShowScopeGuide} title="GitHub token scopes">
+        <p className="mb-4 text-xs leading-relaxed text-text-secondary">
+          When creating a <strong>classic personal access token</strong>, select the scope below so Forge can create repos, push files, and open issues.
+        </p>
+        <div className="rounded-2xl border border-hairline bg-brand/5 px-4 py-3">
+          <div className="flex items-center gap-3">
+            <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded border border-brand bg-brand text-white">
+              <svg viewBox="0 0 12 12" className="h-2.5 w-2.5" fill="currentColor">
+                <path fillRule="evenodd" d="M10.207 2.97a.75.75 0 010 1.06l-5.5 5.5a.75.75 0 01-1.06 0l-2.5-2.5a.75.75 0 011.06-1.06L4.25 7.94l4.97-4.97a.75.75 0 011.06 0z"/>
+              </svg>
+            </span>
+            <div>
+              <code className="font-mono text-[11px] text-text-primary font-semibold">repo</code>
+              <div className="mt-0.5 text-[10px] text-text-secondary leading-relaxed">Full control of private repositories</div>
+            </div>
+          </div>
+        </div>
+        <p className="mt-3 text-xs text-text-secondary leading-relaxed">
+          That&apos;s the only one Forge needs. No need to toggle any other scopes.
+        </p>
+      </Modal>
     </Shell>
   )
 }
@@ -221,12 +412,12 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   )
 }
 
-function SectionFooter({ onSave }: { onSave?: () => void }) {
+function SectionFooter({ onSave, loading }: { onSave?: () => void; loading?: boolean }) {
   return (
     <div className="mt-6 flex justify-end">
-      <Button size="sm" onClick={onSave}>
+      <Button size="sm" onClick={onSave} disabled={loading}>
         <Icon icon={SparklesIcon} size={13} />
-        Save changes
+        {loading ? "Saving…" : "Save changes"}
       </Button>
     </div>
   )

@@ -36,6 +36,41 @@
       "when": 1781202877582,
       "tag": "0004_married_daimon_hellstrom",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1781236363769,
+      "tag": "0005_wise_moon_knight",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1781238761679,
+      "tag": "0006_modern_dakota_north",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1781241603866,
+      "tag": "0007_clammy_venom",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1781243154788,
+      "tag": "0008_slow_expediter",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1781243947636,
+      "tag": "0009_sad_shocker",
+      "breakpoints": true
     }
   ]
 }

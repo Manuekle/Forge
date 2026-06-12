@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
+import dynamic from "next/dynamic"
 import { motion, AnimatePresence } from "framer-motion"
 import { Shell } from "@/components/layout/shell"
 import { AgentDebateCard } from "@/components/shared/agent-debate-card"
@@ -37,19 +38,29 @@ import {
   DatabaseIcon,
   ArrowRight02Icon,
   Cancel01Icon,
+  KanbanIcon,
+  PencilEdit01Icon,
+  ArrowUpRight02Icon,
+  SourceCodeIcon,
 } from "@hugeicons/core-free-icons"
 import { Icon, type IconSvgElement } from "@/components/ui/icon"
+import { KanbanBoard } from "@/components/kanban/board"
+import { CodeWorkspace } from "@/components/code/workspace"
 import type { StoredProject, StoredDecision, StoredArtifact, StoredRun } from "@/lib/store"
 
 const tabs = [
   { id: "orchestration", label: "Orchestration", icon: Telescope01Icon },
   { id: "deliverables", label: "Deliverables", icon: Car01Icon },
+  { id: "board", label: "Board", icon: KanbanIcon },
+  { id: "code", label: "Code", icon: SourceCodeIcon },
   { id: "decisions", label: "Decisions", icon: SignalIcon },
   { id: "sources", label: "Sources", icon: GlobeIcon },
   { id: "memory", label: "Memory", icon: DatabaseIcon },
 ] as const
 
 const deliverableTypes = ["PRD", "Backlog", "Architecture", "UX", "QA", "Roadmap", "Business"] as const
+
+const MonacoEditor = dynamic(() => import("@monaco-editor/react"), { ssr: false })
 
 type DecisionData = {
   id: string
@@ -87,6 +98,9 @@ function ProjectPageInner({ projectId }: { projectId: string }) {
   const [showExport, setShowExport] = useState(false)
   const [showRunContext, setShowRunContext] = useState(false)
   const [selectedVersion, setSelectedVersion] = useState(1)
+  const [editingArtifact, setEditingArtifact] = useState(false)
+  const [draftContent, setDraftContent] = useState("")
+  const [savingArtifact, setSavingArtifact] = useState(false)
   const [debatingTopic, setDebatingTopic] = useState<string | null>(null)
   const [runElapsed, setRunElapsed] = useState(0)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -205,6 +219,36 @@ function ProjectPageInner({ projectId }: { projectId: string }) {
     startPolling()
   }
 
+  async function handleApprove() {
+    const res = await fetch(`/api/projects/${projectId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "approved" }),
+    })
+    if (res.ok) {
+      const updated = await res.json()
+      setProject(updated)
+      toast({ title: "Project approved", description: "All deliverables have been reviewed and approved.", variant: "success" })
+    } else {
+      toast({ title: "Failed to approve", variant: "error" })
+    }
+  }
+
+  async function handleReopen() {
+    const res = await fetch(`/api/projects/${projectId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "active" }),
+    })
+    if (res.ok) {
+      const updated = await res.json()
+      setProject(updated)
+      toast({ title: "Project re-opened", description: "The project is back in active development.", variant: "brand" })
+    } else {
+      toast({ title: "Failed to re-open", variant: "error" })
+    }
+  }
+
   async function handleAddDecision() {
     if (!newTopic || debatingTopic) return
     const topic = newTopic
@@ -230,11 +274,46 @@ function ProjectPageInner({ projectId }: { projectId: string }) {
       .finally(() => setDebatingTopic(null))
   }
 
+  const [parsingBacklog, setParsingBacklog] = useState(false)
+  const [pushingToGitHub, setPushingToGitHub] = useState(false)
+
+  async function handlePushToGitHub() {
+    setPushingToGitHub(true)
+    const res = await fetch(`/api/projects/${projectId}/github`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "push" }),
+    })
+    if (res.ok) {
+      const data = await res.json()
+      setProject((p) => (p ? { ...p, githubRepo: data.repo } : p))
+      toast({ title: "Pushed to GitHub", description: data.message, variant: "success" })
+    } else {
+      const err = await res.json().catch(() => ({ error: "GitHub push failed." }))
+      toast({ title: "GitHub push failed", description: err.error, variant: "error" })
+    }
+    setPushingToGitHub(false)
+  }
+
+  async function handleParseBacklog() {
+    setParsingBacklog(true)
+    const res = await fetch(`/api/projects/${projectId}/tasks/parse`, { method: "POST" })
+    if (res.ok) {
+      const data = await res.json()
+      toast({ title: "Board generated", description: `${data.count} tasks created from backlog.`, variant: "success" })
+    } else {
+      const err = await res.json().catch(() => ({ error: "Could not parse backlog." }))
+      toast({ title: "Failed to generate board", description: err.error, variant: "error" })
+    }
+    setParsingBacklog(false)
+  }
+
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [showEdit, setShowEdit] = useState(false)
   const [editName, setEditName] = useState("")
   const [editDescription, setEditDescription] = useState("")
+  const [editRepo, setEditRepo] = useState("")
   const [saving, setSaving] = useState(false)
 
   async function handleDelete() {
@@ -253,6 +332,7 @@ function ProjectPageInner({ projectId }: { projectId: string }) {
   function handleStartEdit() {
     setEditName(project?.name ?? "")
     setEditDescription(project?.description ?? "")
+    setEditRepo(project?.githubRepo ?? "")
     setShowEdit(true)
   }
 
@@ -262,7 +342,7 @@ function ProjectPageInner({ projectId }: { projectId: string }) {
     const res = await fetch(`/api/projects/${projectId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: editName.trim(), description: editDescription.trim() }),
+      body: JSON.stringify({ name: editName.trim(), description: editDescription.trim(), githubRepo: editRepo }),
     })
     if (res.ok) {
       const updated = await res.json()
@@ -270,7 +350,8 @@ function ProjectPageInner({ projectId }: { projectId: string }) {
       setShowEdit(false)
       toast({ title: "Project updated", variant: "success" })
     } else {
-      toast({ title: "Failed to update project", variant: "error" })
+      const err = await res.json().catch(() => ({ error: "Update failed." }))
+      toast({ title: "Failed to update project", description: err.error, variant: "error" })
     }
     setSaving(false)
   }
@@ -298,6 +379,36 @@ function ProjectPageInner({ projectId }: { projectId: string }) {
     ? latestRun
     : runs.find((r) => r.status === "completed" && (r.events?.length ?? 0) > 0) ?? latestRun
   const view = deriveLiveView(viewRun)
+
+  function handleStartEditArtifact() {
+    if (!currentArtifact) return
+    setDraftContent(currentArtifact.content)
+    setEditingArtifact(true)
+  }
+
+  async function handleSaveArtifact() {
+    if (!currentArtifact) return
+    setSavingArtifact(true)
+    try {
+      const res = await fetch(`/api/projects/${projectId}/artifacts/${currentArtifact.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: draftContent }),
+      })
+      if (res.ok) {
+        const updated: StoredArtifact = await res.json()
+        setArtifacts((prev) => prev.map((a) => (a.id === updated.id ? updated : a)))
+        setEditingArtifact(false)
+        toast({ title: "Artifact saved", description: `${currentArtifact.title} updated.`, variant: "success" })
+      } else {
+        const err = await res.json().catch(() => ({ error: "Save failed." }))
+        toast({ title: "Failed to save artifact", description: err.error, variant: "error" })
+      }
+    } catch {
+      toast({ title: "Failed to save artifact", description: "Network error.", variant: "error" })
+    }
+    setSavingArtifact(false)
+  }
 
   if (loading) {
     return (
@@ -383,6 +494,82 @@ function ProjectPageInner({ projectId }: { projectId: string }) {
               )}
             </AnimatePresence>
 
+            {/* Review panel — shown when project is in_review */}
+            {project.status === "in_review" && (
+              <motion.div
+                initial={{ opacity: 0, height: 0, marginBottom: 0 }}
+                animate={{ opacity: 1, height: "auto", marginBottom: 24 }}
+                className="overflow-hidden"
+              >
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl bg-surface-2 px-4 py-2.5 ring-hair lift-1">
+                  <span className="relative flex h-2 w-2 flex-shrink-0">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-warning opacity-50" />
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-warning" />
+                  </span>
+                  <span className="text-xs font-medium text-warning">Ready for review</span>
+                  <span className="hidden font-mono text-[10px] text-muted lg:inline">
+                    {artifacts.length} artifact{artifacts.length !== 1 ? "s" : ""} · {decisions.length} decision{decisions.length !== 1 ? "s" : ""} · {runs.length} run{runs.length !== 1 ? "s" : ""}
+                  </span>
+                  <div className="ml-auto flex flex-wrap items-center gap-1.5">
+                    <Button size="sm" variant="ghost" onClick={handleParseBacklog} disabled={parsingBacklog}>
+                      <Icon icon={KanbanIcon} size={13} />
+                      {parsingBacklog ? "Generating…" : "Generate board"}
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={handlePushToGitHub} disabled={pushingToGitHub}>
+                      <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="currentColor">
+                        <path fillRule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.05.58 1.23.85.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+                      </svg>
+                      {pushingToGitHub ? (project.githubRepo ? "Syncing…" : "Pushing…") : (project.githubRepo ? "Sync GitHub" : "Push to GitHub")}
+                    </Button>
+                    {project.githubRepo && (
+                      <Button size="sm" variant="ghost" onClick={() => window.open(project.githubRepo!, "_blank", "noopener")}>
+                        <Icon icon={ArrowUpRight02Icon} size={13} />
+                        View repo
+                      </Button>
+                    )}
+                    <Button size="sm" onClick={handleApprove}>
+                      <Icon icon={SignalIcon} size={13} />
+                      Mark approved
+                    </Button>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {/* Approved notice */}
+            {project.status === "approved" && (
+              <motion.div
+                initial={{ opacity: 0, height: 0, marginBottom: 0 }}
+                animate={{ opacity: 1, height: "auto", marginBottom: 24 }}
+                className="overflow-hidden"
+              >
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl bg-surface-2 px-4 py-2.5 ring-hair lift-1">
+                  <span className="h-2 w-2 flex-shrink-0 rounded-full bg-success" />
+                  <span className="text-xs font-medium text-success">Approved</span>
+                  <span className="hidden font-mono text-[10px] text-muted lg:inline">
+                    {artifacts.length} artifact{artifacts.length !== 1 ? "s" : ""} · {decisions.length} decision{decisions.length !== 1 ? "s" : ""} · {runs.length} run{runs.length !== 1 ? "s" : ""}
+                  </span>
+                  <div className="ml-auto flex flex-wrap items-center gap-1.5">
+                    <Button size="sm" variant="ghost" onClick={handlePushToGitHub} disabled={pushingToGitHub}>
+                      <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="currentColor">
+                        <path fillRule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.05.58 1.23.85.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+                      </svg>
+                      {pushingToGitHub ? (project.githubRepo ? "Syncing…" : "Pushing…") : (project.githubRepo ? "Sync GitHub" : "Push to GitHub")}
+                    </Button>
+                    {project.githubRepo && (
+                      <Button size="sm" variant="ghost" onClick={() => window.open(project.githubRepo!, "_blank", "noopener")}>
+                        <Icon icon={ArrowUpRight02Icon} size={13} />
+                        View repo
+                      </Button>
+                    )}
+                    <Button size="sm" variant="ghost" onClick={handleReopen}>
+                      Re-open
+                    </Button>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
             {/* Tabs — pill segmented control */}
             <div className="mb-7 inline-flex gap-1 rounded-full bg-surface-inset p-1 ring-hair">
               {tabs.map((t) => {
@@ -458,6 +645,23 @@ function ProjectPageInner({ projectId }: { projectId: string }) {
               </motion.div>
             )}
 
+            {/* Tab: Board — kanban task board */}
+            {activeTab === "board" && (
+              <motion.div key="board" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.18 }}>
+                <Card variant="elevated" className="p-5">
+                  <SectionHeading icon={KanbanIcon}>Task board</SectionHeading>
+                  <KanbanBoard projectId={projectId} />
+                </Card>
+              </motion.div>
+            )}
+
+            {/* Tab: Code — engineer agent workspace */}
+            {activeTab === "code" && (
+              <motion.div key="code" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.18 }}>
+                <CodeWorkspace projectId={projectId} />
+              </motion.div>
+            )}
+
             {/* Tab: Deliverables */}
             {activeTab === "deliverables" && (
               <motion.div key="deliverables" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.18 }}>
@@ -467,7 +671,7 @@ function ProjectPageInner({ projectId }: { projectId: string }) {
                     return (
                       <button
                         key={t}
-                        onClick={() => { setActiveDeliverable(t); setSelectedVersion(1) }}
+                        onClick={() => { setActiveDeliverable(t); setSelectedVersion(1); setEditingArtifact(false) }}
                         aria-pressed={active}
                         className={cn(
                           "whitespace-nowrap rounded-full px-4 py-1.5 text-sm transition-all duration-200",
@@ -491,7 +695,7 @@ function ProjectPageInner({ projectId }: { projectId: string }) {
                             {allVersions.map((a) => (
                               <button
                                 key={a.version}
-                                onClick={() => setSelectedVersion(a.version)}
+                                onClick={() => { setSelectedVersion(a.version); setEditingArtifact(false) }}
                                 className={cn(
                                   "rounded-full px-2.5 py-0.5 text-[11px] font-mono transition-all",
                                   a.version === selectedVersion
@@ -507,6 +711,12 @@ function ProjectPageInner({ projectId }: { projectId: string }) {
                         {allVersions.length <= 1 && <Badge variant="neutral">v{currentArtifact.version}</Badge>}
                       </div>
                       <div className="flex items-center gap-2">
+                        {!editingArtifact && (
+                          <Button size="sm" variant="secondary" onClick={handleStartEditArtifact}>
+                            <Icon icon={PencilEdit01Icon} size={14} />
+                            Edit
+                          </Button>
+                        )}
                         <Button size="sm" onClick={() => setShowExport(true)}>
                           <Icon icon={Download01Icon} size={14} />
                           Export
@@ -514,9 +724,51 @@ function ProjectPageInner({ projectId }: { projectId: string }) {
                       </div>
                     </div>
                     <div className="px-6 pb-6">
-                      <div className="rounded-2xl bg-surface-inset p-5 text-xs leading-relaxed text-text-secondary ring-hair">
-                        <Markdown content={currentArtifact.content} />
-                      </div>
+                      {editingArtifact ? (
+                        <div className="flex flex-col gap-3">
+                          <div className="overflow-hidden rounded-2xl ring-hair">
+                            <MonacoEditor
+                              height="400px"
+                              language="markdown"
+                              theme="forge-dark"
+                              value={draftContent}
+                              onChange={(value) => setDraftContent(value ?? "")}
+                              beforeMount={(monaco) => {
+                                monaco.editor.defineTheme("forge-dark", {
+                                  base: "vs-dark",
+                                  inherit: true,
+                                  rules: [],
+                                  colors: {
+                                    "editor.background": "#0C0C0E",
+                                    "editor.lineHighlightBackground": "#141417",
+                                    "editorLineNumber.foreground": "#4A4A4F",
+                                    "editorGutter.background": "#0C0C0E",
+                                  },
+                                })
+                              }}
+                              options={{
+                                minimap: { enabled: false },
+                                fontSize: 13,
+                                wordWrap: "on",
+                                scrollBeyondLastLine: false,
+                                padding: { top: 16, bottom: 16 },
+                              }}
+                            />
+                          </div>
+                          <div className="flex justify-end gap-2">
+                            <Button size="sm" variant="secondary" onClick={() => setEditingArtifact(false)} disabled={savingArtifact}>
+                              Cancel
+                            </Button>
+                            <Button size="sm" onClick={handleSaveArtifact} disabled={savingArtifact}>
+                              {savingArtifact ? "Saving…" : "Save"}
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="rounded-2xl bg-surface-inset p-5 text-xs leading-relaxed text-text-secondary ring-hair">
+                          <Markdown content={currentArtifact.content} />
+                        </div>
+                      )}
                     </div>
                   </Card>
                 ) : (
@@ -686,6 +938,7 @@ function ProjectPageInner({ projectId }: { projectId: string }) {
       <ExportModal
         open={showExport}
         onOpenChange={setShowExport}
+        projectId={projectId}
         projectName={project?.name}
         artifacts={artifacts}
         decisions={decisions}
@@ -729,6 +982,17 @@ function ProjectPageInner({ projectId }: { projectId: string }) {
               rows={4}
               className="w-full rounded-2xl bg-surface-2 p-4 text-sm text-text-primary placeholder:text-faint outline-none ring-hair transition-all duration-200 focus:ring-hair-strong focus:bg-surface-3 resize-none"
             />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-xs font-medium text-text-secondary">GitHub repository</label>
+            <Input
+              value={editRepo}
+              onChange={(e) => setEditRepo(e.target.value)}
+              placeholder="https://github.com/owner/repo or owner/repo"
+            />
+            <p className="mt-1.5 text-[11px] leading-relaxed text-text-secondary">
+              Link an existing repo to push there instead of creating one. Docs go to <code className="rounded bg-surface-inset px-1 font-mono text-[10px]">FORGE.md</code> in linked repos so your README is never touched. Leave empty and Forge creates a repo on first push.
+            </p>
           </div>
           <div className="flex gap-2 pt-2">
             <Button type="button" variant="secondary" size="md" className="flex-1" onClick={() => setShowEdit(false)} disabled={saving}>

@@ -161,7 +161,7 @@ export default function DashboardPage() {
                               <div className="min-w-0 flex-1">
                                 <div className="flex items-center gap-2.5">
                                   <h3 className="truncate text-sm font-semibold text-text-primary">{p.name}</h3>
-                                  <Badge variant={p.status as "active" | "planning" | "in_review" | "archived"} dot />
+                                  <Badge variant={p.status as "active" | "planning" | "in_review" | "approved" | "archived"} dot />
                                 </div>
                                 <p className="mt-1 truncate text-xs text-text-secondary">{p.description}</p>
                               </div>

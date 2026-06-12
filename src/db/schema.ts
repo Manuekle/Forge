@@ -7,6 +7,11 @@ export const users = pgTable("users", {
   emailVerified: timestamp("email_verified", { mode: "date", withTimezone: true }),
   image: text("image"),
   plan: text("plan").default("free").notNull(),
+  githubToken: text("github_token"),
+  jiraDomain: text("jira_domain"),
+  jiraEmail: text("jira_email"),
+  jiraToken: text("jira_token"),
+  linearToken: text("linear_token"),
   createdAt: timestamp("created_at", { mode: "date", withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { mode: "date", withTimezone: true }).defaultNow().notNull(),
 })
@@ -52,6 +57,7 @@ export const projects = pgTable("projects", {
   status: text("status").default("planning").notNull(),
   progress: integer("progress").default(0).notNull(),
   template: text("template"),
+  githubRepo: text("github_repo"),
   createdAt: timestamp("created_at", { mode: "date", withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { mode: "date", withTimezone: true }).defaultNow().notNull(),
 })
@@ -133,6 +139,33 @@ export const runs = pgTable("runs", {
     .default({}),
   consensus: text("consensus"),
   createdAt: timestamp("created_at", { mode: "date", withTimezone: true }).defaultNow().notNull(),
+})
+
+export const tasks = pgTable("tasks", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  projectId: uuid("project_id")
+    .notNull()
+    .references(() => projects.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  description: text("description"),
+  priority: text("priority").default("p2").notNull(),
+  storyPoints: integer("story_points"),
+  status: text("status").default("todo").notNull(),
+  order: integer("order").default(0).notNull(),
+  assignee: text("assignee"),
+  createdAt: timestamp("created_at", { mode: "date", withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { mode: "date", withTimezone: true }).defaultNow().notNull(),
+})
+
+export const codeFiles = pgTable("code_files", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  projectId: uuid("project_id")
+    .notNull()
+    .references(() => projects.id, { onDelete: "cascade" }),
+  path: text("path").notNull(),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at", { mode: "date", withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { mode: "date", withTimezone: true }).defaultNow().notNull(),
 })
 
 export const activities = pgTable("activities", {

@@ -8,13 +8,14 @@ import { useToast } from "@/components/ui/toast"
 import type { StoredArtifact, StoredDecision } from "@/lib/store"
 import {
   File01Icon, Tick01Icon, Download01Icon, ArrowUpRight02Icon, SourceCodeIcon, Book01Icon,
-  GitBranchIcon, Layers01Icon
+  GitBranchIcon, Layers01Icon, FlashIcon
 } from "@hugeicons/core-free-icons"
 import { Icon } from "@/components/ui/icon"
 
 interface ExportModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  projectId?: string
   projectName?: string
   artifacts?: StoredArtifact[]
   decisions?: StoredDecision[]
@@ -56,10 +57,18 @@ const formats = [
   {
     id: "jira",
     label: "Jira",
-    desc: "Coming soon",
+    desc: "Create issues from board tasks",
     icon: GitBranchIcon,
     color: "#A78BFA",
-    available: false,
+    available: true,
+  },
+  {
+    id: "linear",
+    label: "Linear",
+    desc: "Create issues from board tasks",
+    icon: FlashIcon,
+    color: "#5E6AD2",
+    available: true,
   },
   {
     id: "github",
@@ -85,9 +94,10 @@ function slug(name: string) {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "project"
 }
 
-export function ExportModal({ open, onOpenChange, projectName = "Project", artifacts = [], decisions = [] }: ExportModalProps) {
+export function ExportModal({ open, onOpenChange, projectId, projectName = "Project", artifacts = [], decisions = [] }: ExportModalProps) {
   const { toast } = useToast()
   const [selected, setSelected] = useState<string | null>(null)
+  const [exporting, setExporting] = useState(false)
 
   // Latest version of each artifact type only.
   function latestArtifacts(): StoredArtifact[] {
@@ -98,8 +108,30 @@ export function ExportModal({ open, onOpenChange, projectName = "Project", artif
     return [...latest.values()]
   }
 
-  function handleExport() {
+  async function handleExport() {
     if (!selected) return
+
+    if (selected === "jira" || selected === "linear") {
+      if (!projectId) return
+      const label = selected === "jira" ? "Jira" : "Linear"
+      setExporting(true)
+      try {
+        const res = await fetch(`/api/projects/${projectId}/${selected}`, { method: "POST" })
+        const data = await res.json().catch(() => ({}))
+        if (res.ok) {
+          toast({ title: `Exported to ${label}`, description: data.message, variant: "success" })
+          setSelected(null)
+          onOpenChange(false)
+        } else {
+          toast({ title: `${label} export failed`, description: data.error || "Something went wrong.", variant: "error" })
+        }
+      } catch {
+        toast({ title: `${label} export failed`, description: "Network error.", variant: "error" })
+      }
+      setExporting(false)
+      return
+    }
+
     const docs = latestArtifacts()
     if (docs.length === 0) {
       toast({ title: "Nothing to export", description: "Run the agents first to generate deliverables.", variant: "error" })
@@ -180,10 +212,10 @@ export function ExportModal({ open, onOpenChange, projectName = "Project", artif
           <Button variant="secondary" size="sm" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button size="sm" disabled={!selected} onClick={handleExport}>
+          <Button size="sm" disabled={!selected || exporting} onClick={handleExport}>
             <span className="flex items-center gap-1.5">
               <Icon icon={Download01Icon} size={13} />
-              Export
+              {exporting ? "Exporting…" : "Export"}
             </span>
           </Button>
         </div>

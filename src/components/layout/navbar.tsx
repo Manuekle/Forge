@@ -1,8 +1,12 @@
 "use client"
 
+import * as React from "react"
 import { formatDuration } from "@/lib/utils"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { NotificationCenter } from "@/components/ui/notification-center"
+import { FeedbackModal } from "@/components/shared/feedback-modal"
+import { Megaphone02Icon } from "@hugeicons/core-free-icons"
+import { Icon } from "@/components/ui/icon"
 
 interface NavbarProps {
   breadcrumb?: string
@@ -11,9 +15,10 @@ interface NavbarProps {
 }
 
 export function Navbar({ breadcrumb = "Dashboard", projectMode, latestRun }: NavbarProps) {
+  const [feedbackOpen, setFeedbackOpen] = React.useState(false)
 
   return (
-    <div className="relative z-10 flex h-16 flex-shrink-0 items-center justify-between px-4 md:px-8">
+    <div className="relative z-10 flex h-16 flex-shrink-0 items-center justify-between pl-14 pr-3 md:px-8">
       <div className="flex items-center gap-2 text-sm">
         <span className="text-muted">Forge</span>
         <span className="text-faint">/</span>
@@ -21,9 +26,17 @@ export function Navbar({ breadcrumb = "Dashboard", projectMode, latestRun }: Nav
       </div>
       <div className="flex items-center">
         <div className="flex items-center gap-1">
+          <button
+            onClick={() => setFeedbackOpen(true)}
+            className="flex h-9 w-9 items-center justify-center rounded-full text-muted transition-all duration-200 hover:bg-hover-strong hover:text-text-primary"
+          >
+            <Icon icon={Megaphone02Icon} size={16} />
+          </button>
           <NotificationCenter />
           <ThemeToggle />
         </div>
+
+        <FeedbackModal open={feedbackOpen} onOpenChange={setFeedbackOpen} />
 
         {projectMode && latestRun && (
           <>

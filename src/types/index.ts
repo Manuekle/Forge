@@ -23,7 +23,7 @@ export interface Project {
   id: string
   name: string
   description: string
-  status: "active" | "planning" | "in_review" | "archived"
+  status: "active" | "planning" | "in_review" | "approved" | "archived"
   progress: number
   updatedAt: string
   agents: AgentType[]

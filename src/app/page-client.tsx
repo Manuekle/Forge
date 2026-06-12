@@ -108,10 +108,13 @@ function Bubbles() {
   )
 }
 
-const SPONSORS = [
+type Sponsor = { label: string; src: string } | { label: string; srcLight: string; srcDark: string }
+
+const SPONSORS: Sponsor[] = [
   { src: "/sponsors/microsoft.svg", label: "Microsoft" },
   { src: "/sponsors/azure.svg", label: "Azure" },
   { src: "/sponsors/Microsoft-Foundry.svg", label: "Foundry IQ" },
+  { srcLight: "/sponsors/GitHub_light.svg", srcDark: "/sponsors/GitHub_dark.svg", label: "GitHub" },
 ]
 
 function Sponsors() {
@@ -121,7 +124,14 @@ function Sponsors() {
       <div className="flex flex-wrap items-center justify-center gap-x-10 gap-y-4">
         {SPONSORS.map((s) => (
           <span key={s.label} className="flex items-center gap-2.5 opacity-75 transition-opacity duration-200 hover:opacity-100">
-            <Image src={s.src} alt="" width={20} height={20} className="h-5 w-5" />
+            {"src" in s ? (
+              <Image src={s.src} alt="" width={20} height={20} className="h-5 w-5" />
+            ) : (
+              <>
+                <img src={s.srcLight} alt="" className="h-5 w-5 dark:hidden" />
+                <img src={s.srcDark} alt="" className="hidden h-5 w-5 dark:block" />
+              </>
+            )}
             <span className="text-sm font-semibold tracking-tight text-text-secondary">{s.label}</span>
           </span>
         ))}

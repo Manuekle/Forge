@@ -31,6 +31,7 @@ const filters = [
   { label: "Active", value: "active" },
   { label: "Planning", value: "planning" },
   { label: "In review", value: "in_review" },
+  { label: "Approved", value: "approved" },
   { label: "Archived", value: "archived" },
 ] as const
 
@@ -192,7 +193,7 @@ export default function ProjectsPage() {
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2.5">
                               <h3 className="truncate text-sm font-semibold text-text-primary">{p.name}</h3>
-                              <Badge variant={p.status as "active" | "planning" | "in_review" | "archived"} dot />
+                              <Badge variant={p.status as "active" | "planning" | "in_review" | "approved" | "archived"} dot />
                             </div>
                             <p className="mt-1 line-clamp-1 text-xs leading-relaxed text-text-secondary">{p.description}</p>
                           </div>
@@ -256,7 +257,7 @@ export default function ProjectsPage() {
                           </Link>
                         </td>
                         <td className="px-4 py-3">
-                          <Badge variant={p.status as "active" | "planning" | "in_review" | "archived"} dot />
+                          <Badge variant={p.status as "active" | "planning" | "in_review" | "approved" | "archived"} dot />
                         </td>
                         <td className="max-w-[220px] truncate px-4 py-3 text-text-secondary">
                           {p.description}

@@ -4,6 +4,7 @@ const statusColors: Record<string, string> = {
   active: "bg-success",
   planning: "bg-info",
   in_review: "bg-warning",
+  approved: "bg-brand",
   archived: "bg-muted",
   done: "bg-faint",
   working: "bg-brand",

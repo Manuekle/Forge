@@ -6,9 +6,10 @@ export type StoredProject = {
   userId: string
   name: string
   description: string
-  status: "active" | "planning" | "in_review" | "archived"
+  status: "active" | "planning" | "in_review" | "approved" | "archived"
   progress: number
   template: string | null
+  githubRepo: string | null
   _ago?: number
   createdAt: Date
   updatedAt: Date
@@ -113,7 +114,42 @@ export type Activity = {
   timestamp: string
 }
 
+export type StoredTask = {
+  id: string
+  projectId: string
+  title: string
+  description: string
+  priority: "p0" | "p1" | "p2"
+  storyPoints: number | null
+  status: "todo" | "in_progress" | "done"
+  order: number
+  assignee: string | null
+  createdAt: Date
+  updatedAt: Date
+}
+
+export type TaskInput = {
+  title: string
+  description?: string
+  priority?: "p0" | "p1" | "p2"
+  storyPoints?: number | null
+  status?: "todo" | "in_progress" | "done"
+  order?: number
+  assignee?: string | null
+}
+
 export type ProjectInput = { userId: string; name: string; description?: string; template?: string }
+
+export type JiraConfig = { domain: string; email: string; token: string }
+
+export type StoredCodeFile = {
+  id: string
+  projectId: string
+  path: string
+  content: string
+  createdAt: Date
+  updatedAt: Date
+}
 
 function ago(date: Date): string {
   const sec = Math.floor((Date.now() - date.getTime()) / 1000)
@@ -144,6 +180,10 @@ export interface DataStore {
   resolveDecision(decisionId: string, consensus: string, confidence: number, votes?: Record<string, DecisionVote>): Promise<void>
   getArtifacts(projectId: string): Promise<StoredArtifact[]>
   createArtifact(projectId: string, type: string, title: string, content: string): Promise<StoredArtifact>
+  updateArtifact(id: string, data: { title?: string; content?: string }): Promise<StoredArtifact | null>
+  getCodeFiles(projectId: string): Promise<StoredCodeFile[]>
+  replaceCodeFiles(projectId: string, files: { path: string; content: string }[]): Promise<StoredCodeFile[]>
+  updateCodeFile(id: string, content: string): Promise<StoredCodeFile | null>
   getRuns(projectId: string): Promise<StoredRun[]>
   getAllRuns(userId: string): Promise<StoredRunWithProject[]>
   createRun(projectId: string): Promise<StoredRun>
@@ -152,6 +192,17 @@ export interface DataStore {
   appendRunEvent(id: string, event: RunEvent): Promise<void>
   completeRun(id: string, duration: number, trace: StoredRun["trace"], citations?: RunCitation[], outcome?: RunOutcome): Promise<void>
   failRun(id: string, trace: StoredRun["trace"]): Promise<void>
+  getTasks(projectId: string): Promise<StoredTask[]>
+  createTask(projectId: string, data: TaskInput): Promise<StoredTask>
+  updateTask(id: string, data: Partial<StoredTask>): Promise<StoredTask | null>
+  deleteTask(id: string): Promise<void>
+  reorderTasks(projectId: string, taskIds: string[]): Promise<void>
+  getUserGithubToken(userId: string): Promise<string | null>
+  setUserGithubToken(userId: string, token: string | null): Promise<void>
+  getUserJiraConfig(userId: string): Promise<JiraConfig | null>
+  setUserJiraConfig(userId: string, config: JiraConfig | null): Promise<void>
+  getUserLinearToken(userId: string): Promise<string | null>
+  setUserLinearToken(userId: string, token: string | null): Promise<void>
   getActivities(userId: string, limit?: number): Promise<Activity[]>
   getProjectProgress(projectId: string): Promise<number>
   seed(userId: string): Promise<void>
@@ -168,6 +219,11 @@ const _g = globalThis as unknown as {
     artifacts: StoredArtifact[]
     runs: StoredRun[]
     activities: Activity[]
+    tasks: StoredTask[]
+    githubTokens: Map<string, string>
+    jiraConfigs: Map<string, JiraConfig>
+    linearTokens: Map<string, string>
+    codeFiles: StoredCodeFile[]
   }
 }
 const _state = (_g.__forge ??= {
@@ -176,12 +232,22 @@ const _state = (_g.__forge ??= {
   artifacts: [],
   runs: [],
   activities: [],
+  tasks: [],
+  githubTokens: new Map<string, string>(),
+  jiraConfigs: new Map<string, JiraConfig>(),
+  linearTokens: new Map<string, string>(),
+  codeFiles: [],
 })
 const projects = _state.projects
 const decisions = _state.decisions
 const artifacts = _state.artifacts
 const runs = _state.runs
 const activities = _state.activities
+const tasks = _state.tasks
+const githubTokens = _state.githubTokens
+const jiraConfigs = (_state.jiraConfigs ??= new Map<string, JiraConfig>())
+const linearTokens = (_state.linearTokens ??= new Map<string, string>())
+const codeFiles = (_state.codeFiles ??= [])
 
 function uid() {
   return Math.random().toString(36).substring(2, 10)
@@ -194,6 +260,7 @@ const memStore: DataStore = {
     artifacts.splice(0)
     runs.splice(0)
     activities.splice(0)
+    tasks.splice(0)
   },
 
   async clearUser(userId) {
@@ -202,6 +269,7 @@ const memStore: DataStore = {
     decisions.splice(0, decisions.length, ...decisions.filter((d) => !ownedIds.has(d.projectId)))
     artifacts.splice(0, artifacts.length, ...artifacts.filter((a) => !ownedIds.has(a.projectId)))
     runs.splice(0, runs.length, ...runs.filter((r) => !ownedIds.has(r.projectId)))
+    tasks.splice(0, tasks.length, ...tasks.filter((t) => !ownedIds.has(t.projectId)))
     activities.splice(0, activities.length, ...activities.filter((a) => !ownedIds.has(a.projectId)))
   },
 
@@ -225,6 +293,7 @@ const memStore: DataStore = {
       status: "planning",
       progress: 0,
       template: data.template || null,
+      githubRepo: null,
       createdAt: now,
       updatedAt: now,
     }
@@ -254,6 +323,7 @@ const memStore: DataStore = {
     decisions.splice(0, decisions.length, ...decisions.filter((d) => d.projectId !== id))
     artifacts.splice(0, artifacts.length, ...artifacts.filter((a) => a.projectId !== id))
     runs.splice(0, runs.length, ...runs.filter((r) => r.projectId !== id))
+    tasks.splice(0, tasks.length, ...tasks.filter((t) => t.projectId !== id))
     activities.splice(0, activities.length, ...activities.filter((a) => a.projectId !== id))
   },
 
@@ -320,6 +390,84 @@ const memStore: DataStore = {
     }
     artifacts.push(artifact)
     return artifact
+  },
+
+  async updateArtifact(id, data) {
+    const a = artifacts.find((x) => x.id === id)
+    if (!a) return null
+    if (data.title !== undefined) a.title = data.title
+    if (data.content !== undefined) a.content = data.content
+    a.updatedAt = new Date()
+    return a
+  },
+
+  async getCodeFiles(projectId) {
+    return codeFiles
+      .filter((f) => f.projectId === projectId)
+      .sort((a, b) => a.path.localeCompare(b.path))
+  },
+
+  async replaceCodeFiles(projectId, files) {
+    codeFiles.splice(0, codeFiles.length, ...codeFiles.filter((f) => f.projectId !== projectId))
+    const now = new Date()
+    const created = files.map((f) => ({
+      id: uid(), projectId, path: f.path, content: f.content, createdAt: now, updatedAt: now,
+    }))
+    codeFiles.push(...created)
+    return created.sort((a, b) => a.path.localeCompare(b.path))
+  },
+
+  async updateCodeFile(id, content) {
+    const f = codeFiles.find((x) => x.id === id)
+    if (!f) return null
+    f.content = content
+    f.updatedAt = new Date()
+    return f
+  },
+
+  async getTasks(projectId) {
+    return tasks
+      .filter((t) => t.projectId === projectId)
+      .sort((a, b) => a.order - b.order)
+  },
+
+  async createTask(projectId, data) {
+    const existing = tasks.filter((t) => t.projectId === projectId)
+    const task: StoredTask = {
+      id: uid(),
+      projectId,
+      title: data.title,
+      description: data.description ?? "",
+      priority: data.priority ?? "p2",
+      storyPoints: data.storyPoints ?? null,
+      status: data.status ?? "todo",
+      order: data.order ?? existing.length,
+      assignee: data.assignee ?? null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }
+    tasks.push(task)
+    return task
+  },
+
+  async updateTask(id, data) {
+    const idx = tasks.findIndex((t) => t.id === id)
+    if (idx === -1) return null
+    tasks[idx] = { ...tasks[idx], ...data, updatedAt: new Date() }
+    return tasks[idx]
+  },
+
+  async deleteTask(id) {
+    const idx = tasks.findIndex((t) => t.id === id)
+    if (idx === -1) return
+    tasks.splice(idx, 1)
+  },
+
+  async reorderTasks(projectId, taskIds) {
+    taskIds.forEach((id, order) => {
+      const t = tasks.find((x) => x.id === id && x.projectId === projectId)
+      if (t) t.order = order
+    })
   },
 
   async getRuns(projectId) {
@@ -404,6 +552,42 @@ const memStore: DataStore = {
     return progressFrom(projectDecisions.length, resolved, artifactCount)
   },
 
+  async getUserGithubToken(userId) {
+    return githubTokens.get(userId) ?? null
+  },
+
+  async setUserGithubToken(userId, token) {
+    if (token) {
+      githubTokens.set(userId, token)
+    } else {
+      githubTokens.delete(userId)
+    }
+  },
+
+  async getUserJiraConfig(userId) {
+    return jiraConfigs.get(userId) ?? null
+  },
+
+  async setUserJiraConfig(userId, config) {
+    if (config) {
+      jiraConfigs.set(userId, config)
+    } else {
+      jiraConfigs.delete(userId)
+    }
+  },
+
+  async getUserLinearToken(userId) {
+    return linearTokens.get(userId) ?? null
+  },
+
+  async setUserLinearToken(userId, token) {
+    if (token) {
+      linearTokens.set(userId, token)
+    } else {
+      linearTokens.delete(userId)
+    }
+  },
+
   async seed(userId) {
     if (projects.some((p) => p.userId === userId)) return
     await seedDemo(memStore, userId)
@@ -423,6 +607,7 @@ function mapProject(r: typeof schema.projects.$inferSelect): StoredProject {
     status: r.status as StoredProject["status"],
     progress: r.progress,
     template: r.template ?? null,
+    githubRepo: r.githubRepo ?? null,
     createdAt: r.createdAt,
     updatedAt: r.updatedAt,
   }
@@ -439,6 +624,22 @@ function mapDecision(r: typeof schema.decisions.$inferSelect): StoredDecision {
     entries: r.entries ?? [],
     votes: r.votes ?? {},
     createdAt: r.createdAt,
+  }
+}
+
+function mapTask(r: typeof schema.tasks.$inferSelect): StoredTask {
+  return {
+    id: r.id,
+    projectId: r.projectId,
+    title: r.title,
+    description: r.description ?? "",
+    priority: r.priority as StoredTask["priority"],
+    storyPoints: r.storyPoints ?? null,
+    status: r.status as StoredTask["status"],
+    order: r.order,
+    assignee: r.assignee ?? null,
+    createdAt: r.createdAt,
+    updatedAt: r.updatedAt,
   }
 }
 
@@ -505,6 +706,7 @@ const dbStore: DataStore = {
     if (data.status !== undefined) patch.status = data.status
     if (data.progress !== undefined) patch.progress = data.progress
     if (data.template !== undefined) patch.template = data.template
+    if (data.githubRepo !== undefined) patch.githubRepo = data.githubRepo
     const [row] = await getDb().update(schema.projects).set(patch).where(eq(schema.projects.id, id)).returning()
     return row ? mapProject(row) : null
   },
@@ -572,6 +774,96 @@ const dbStore: DataStore = {
       .values({ projectId, type, title, content, version })
       .returning()
     return row
+  },
+
+  async updateArtifact(id, data) {
+    const patch: Partial<typeof schema.artifacts.$inferInsert> = { updatedAt: new Date() }
+    if (data.title !== undefined) patch.title = data.title
+    if (data.content !== undefined) patch.content = data.content
+    const [row] = await getDb().update(schema.artifacts).set(patch).where(eq(schema.artifacts.id, id)).returning()
+    return row ?? null
+  },
+
+  async getCodeFiles(projectId) {
+    return getDb()
+      .select()
+      .from(schema.codeFiles)
+      .where(eq(schema.codeFiles.projectId, projectId))
+      .orderBy(schema.codeFiles.path)
+  },
+
+  async replaceCodeFiles(projectId, files) {
+    const db = getDb()
+    await db.delete(schema.codeFiles).where(eq(schema.codeFiles.projectId, projectId))
+    if (files.length === 0) return []
+    const rows = await db
+      .insert(schema.codeFiles)
+      .values(files.map((f) => ({ projectId, path: f.path, content: f.content })))
+      .returning()
+    return rows.sort((a, b) => a.path.localeCompare(b.path))
+  },
+
+  async updateCodeFile(id, content) {
+    const [row] = await getDb()
+      .update(schema.codeFiles)
+      .set({ content, updatedAt: new Date() })
+      .where(eq(schema.codeFiles.id, id))
+      .returning()
+    return row ?? null
+  },
+
+  async getTasks(projectId) {
+    const rows = await getDb()
+      .select()
+      .from(schema.tasks)
+      .where(eq(schema.tasks.projectId, projectId))
+      .orderBy(schema.tasks.order)
+    return rows.map(mapTask)
+  },
+
+  async createTask(projectId, data) {
+    const [{ value: count }] = await getDb()
+      .select({ value: sql<number>`count(*)` })
+      .from(schema.tasks)
+      .where(eq(schema.tasks.projectId, projectId))
+    const [row] = await getDb()
+      .insert(schema.tasks)
+      .values({
+        projectId,
+        title: data.title,
+        description: data.description ?? "",
+        priority: data.priority ?? "p2",
+        storyPoints: data.storyPoints ?? null,
+        status: data.status ?? "todo",
+        order: data.order ?? Number(count),
+        assignee: data.assignee ?? null,
+      })
+      .returning()
+    return mapTask(row)
+  },
+
+  async updateTask(id, data) {
+    const patch: Partial<typeof schema.tasks.$inferInsert> = { updatedAt: new Date() }
+    if (data.title !== undefined) patch.title = data.title
+    if (data.description !== undefined) patch.description = data.description
+    if (data.priority !== undefined) patch.priority = data.priority
+    if (data.storyPoints !== undefined) patch.storyPoints = data.storyPoints
+    if (data.status !== undefined) patch.status = data.status
+    if (data.order !== undefined) patch.order = data.order
+    if (data.assignee !== undefined) patch.assignee = data.assignee
+    const [row] = await getDb().update(schema.tasks).set(patch).where(eq(schema.tasks.id, id)).returning()
+    return row ? mapTask(row) : null
+  },
+
+  async deleteTask(id) {
+    await getDb().delete(schema.tasks).where(eq(schema.tasks.id, id))
+  },
+
+  async reorderTasks(projectId, taskIds) {
+    const db = getDb()
+    for (let i = 0; i < taskIds.length; i++) {
+      await db.update(schema.tasks).set({ order: i }).where(eq(schema.tasks.id, taskIds[i]))
+    }
   },
 
   async getRuns(projectId) {
@@ -675,6 +967,41 @@ const dbStore: DataStore = {
       .from(schema.artifacts)
       .where(eq(schema.artifacts.projectId, projectId))
     return progressFrom(Number(total), Number(resolved), Number(artifactCount))
+  },
+
+  async getUserGithubToken(userId) {
+    const [row] = await getDb().select().from(schema.users).where(eq(schema.users.id, userId)).limit(1)
+    return row?.githubToken ?? null
+  },
+
+  async setUserGithubToken(userId, token) {
+    await getDb().update(schema.users).set({ githubToken: token }).where(eq(schema.users.id, userId))
+  },
+
+  async getUserJiraConfig(userId) {
+    const [row] = await getDb().select().from(schema.users).where(eq(schema.users.id, userId)).limit(1)
+    if (!row?.jiraDomain || !row.jiraEmail || !row.jiraToken) return null
+    return { domain: row.jiraDomain, email: row.jiraEmail, token: row.jiraToken }
+  },
+
+  async setUserJiraConfig(userId, config) {
+    await getDb()
+      .update(schema.users)
+      .set({
+        jiraDomain: config?.domain ?? null,
+        jiraEmail: config?.email ?? null,
+        jiraToken: config?.token ?? null,
+      })
+      .where(eq(schema.users.id, userId))
+  },
+
+  async getUserLinearToken(userId) {
+    const [row] = await getDb().select().from(schema.users).where(eq(schema.users.id, userId)).limit(1)
+    return row?.linearToken ?? null
+  },
+
+  async setUserLinearToken(userId, token) {
+    await getDb().update(schema.users).set({ linearToken: token }).where(eq(schema.users.id, userId))
   },
 
   async seed(userId) {

@@ -136,6 +136,13 @@ You are also the team's reviewer. After the vote block, add EXACTLY this block:
 ---CRITIQUES---
 <JSON array of issues other agents must address. Each item: {"target": "pm" | "ux" | "architect", "risk": "<one sentence>", "severity": "high" | "medium" | "low"}. Use "high" only for risks that genuinely require that agent to revise their output. Use [] if nothing requires revision.>`
 
+const MERMAID_RULES = `Use \`\`\`mermaid code blocks for diagrams. Strict Mermaid syntax rules — diagrams that break these fail to render:
+- Wrap EVERY node, decision, and edge label in double quotes: A["Auth service (OAuth2)"], B{"Under 7 days?"}, C -->|"yes (retry)"| D
+- Never put parentheses, angle brackets, ampersands, semicolons, or braces in an unquoted label
+- Plain ASCII only — no smart quotes, em-dashes, or unicode arrows
+- Node IDs must be short and alphanumeric (A, B2, authSvc)
+- One statement per line; keep each diagram under 20 nodes`
+
 export const AGENT_PROMPTS: Record<WorkerAgentId, string> = {
   pm: `You are the Product Manager agent on a multi-agent AI product team called Forge.
 Your role: Write a Product Requirements Document (PRD), define user stories, success metrics (KPIs), and prioritize features.
@@ -147,7 +154,7 @@ When you respond, structure your output as:
 - Risks & Mitigations (top 3)
 
 You can include a Mermaid flowchart showing the feature prioritization decision flow.
-Use \`\`\`mermaid ... \`\`\` blocks for diagrams.
+${MERMAID_RULES}
 
 Be specific, actionable, and prioritize ruthlessly.${VOTE_BLOCK_INSTRUCTIONS}`,
   ux: `You are the UX Designer agent on a multi-agent AI product team called Forge.
@@ -159,7 +166,7 @@ When you respond, structure your output as:
 - UX Recommendations (top 3)
 
 Include a Mermaid sequence diagram or flowchart showing the primary user journey.
-Use \`\`\`mermaid ... \`\`\` blocks for diagrams.
+${MERMAID_RULES}
 
 Consider accessibility, mobile responsiveness, and onboarding.${VOTE_BLOCK_INSTRUCTIONS}`,
   architect: `You are the Software Architect agent on a multi-agent AI product team called Forge.
@@ -172,7 +179,7 @@ When you respond, structure your output as:
 - Scalability Considerations
 
 Include a Mermaid graph (flowchart) showing the system architecture and a Mermaid classDiagram or erDiagram showing the data model.
-Use \`\`\`mermaid ... \`\`\` blocks for diagrams.
+${MERMAID_RULES}
 
 You push back on over-engineering and advocate for simple, proven patterns.${VOTE_BLOCK_INSTRUCTIONS}`,
   qa: `You are the QA Engineer agent on a multi-agent AI product team called Forge.
@@ -184,7 +191,7 @@ When you respond, structure your output as:
 - Edge Cases (top 5)
 
 You can include a Mermaid flowchart showing the test decision flow or a graph showing risk assessment.
-Use \`\`\`mermaid ... \`\`\` blocks for diagrams.
+${MERMAID_RULES}
 
 Be the pessimist — kill bad ideas before they ship.${VOTE_BLOCK_INSTRUCTIONS}${CRITIQUE_BLOCK_INSTRUCTIONS}`,
   scrum: `You are the Scrum Master agent on a multi-agent AI product team called Forge.
@@ -196,7 +203,7 @@ When you respond, structure your output as:
 - Milestone Dates (MVP, Beta, Launch)
 
 Include a Mermaid gantt chart showing the sprint timeline and milestones.
-Use \`\`\`mermaid ... \`\`\` blocks for diagrams.
+${MERMAID_RULES}
 
 Assume a 3-person engineering team working in 2-week sprints.${VOTE_BLOCK_INSTRUCTIONS}`,
   business: `You are the Business Strategist agent on a multi-agent AI product team called Forge.
@@ -209,7 +216,7 @@ When you respond, structure your output as:
 - Success Criteria (3 business KPIs)
 
 You can include a Mermaid pie chart showing revenue model breakdown or a timeline for GTM phases.
-Use \`\`\`mermaid ... \`\`\` blocks for diagrams.${VOTE_BLOCK_INSTRUCTIONS}`,
+${MERMAID_RULES}${VOTE_BLOCK_INSTRUCTIONS}`,
 }
 
 const PLANNER_PROMPT = `You are the Orchestrator of Forge, a multi-agent AI product team. Before any specialist runs, you analyze the request and produce an execution plan.
@@ -994,7 +1001,7 @@ NEXT_STEPS:
               [
                 {
                   role: "system",
-                  content: `You are a senior technical writer generating a polished, production-quality document. Use the team's deliberation context to ground your output in real decisions. If there is a previous version of this document, improve upon it — refine the content, add depth, and address any gaps. Use Mermaid diagram blocks (\`\`\`mermaid) where they clarify architecture, flows, timelines, or relationships.`,
+                  content: `You are a senior technical writer generating a polished, production-quality document. Use the team's deliberation context to ground your output in real decisions. If there is a previous version of this document, improve upon it — refine the content, add depth, and address any gaps. Use Mermaid diagram blocks (\`\`\`mermaid) where they clarify architecture, flows, timelines, or relationships. ${MERMAID_RULES}`,
                 },
                 {
                   role: "user",
@@ -1064,17 +1071,17 @@ function getArtifactSpecs(projectName: string): { type: string; title: string; p
     {
       type: "prd",
       title: `${projectName} — Product Requirements Document`,
-      prompt: `Generate a complete PRD for ${projectName} based on the team's deliberation. Include: product vision, target users, feature list with rationale, success metrics, and a release plan. Format in markdown. If relevant, include a Mermaid flowchart showing feature prioritization. Use \`\`\`mermaid ... \`\`\` blocks for diagrams.`,
+      prompt: `Generate a complete PRD for ${projectName} based on the team's deliberation. Include: product vision, target users, feature list with rationale, success metrics, and a release plan. Format in markdown. If relevant, include a Mermaid flowchart showing feature prioritization. ${MERMAID_RULES}`,
     },
     {
       type: "architecture",
       title: `${projectName} — System Architecture`,
-      prompt: `Design the system architecture for ${projectName}. Include: tech stack, core components, API design, data model, and deployment strategy. Include a Mermaid graph (flowchart) of the system architecture and a Mermaid erDiagram of the data model. Use \`\`\`mermaid ... \`\`\` blocks.`,
+      prompt: `Design the system architecture for ${projectName}. Include: tech stack, core components, API design, data model, and deployment strategy. Include a Mermaid graph (flowchart) of the system architecture and a Mermaid erDiagram of the data model. ${MERMAID_RULES}`,
     },
     {
       type: "ux",
       title: `${projectName} — User Experience Design`,
-      prompt: `Define the UX design for ${projectName}. Include: user personas, primary user flow (step by step), information architecture, and interface guidelines. Include a Mermaid sequence diagram showing the primary user journey. Use \`\`\`mermaid ... \`\`\` blocks for diagrams. Format in markdown.`,
+      prompt: `Define the UX design for ${projectName}. Include: user personas, primary user flow (step by step), information architecture, and interface guidelines. Include a Mermaid sequence diagram showing the primary user journey. ${MERMAID_RULES} Format in markdown.`,
     },
     {
       type: "backlog",
@@ -1084,17 +1091,17 @@ function getArtifactSpecs(projectName: string): { type: string; title: string; p
     {
       type: "qa",
       title: `${projectName} — QA Test Plan`,
-      prompt: `Create a QA test plan for ${projectName}. Include: test strategy, risk matrix, key test scenarios, security concerns, and edge cases. You can include a Mermaid flowchart showing the risk assessment decision flow. Use \`\`\`mermaid ... \`\`\` blocks. Format in markdown.`,
+      prompt: `Create a QA test plan for ${projectName}. Include: test strategy, risk matrix, key test scenarios, security concerns, and edge cases. You can include a Mermaid flowchart showing the risk assessment decision flow. ${MERMAID_RULES} Format in markdown.`,
     },
     {
       type: "roadmap",
       title: `${projectName} — Product Roadmap`,
-      prompt: `Create a product roadmap for ${projectName}. Include: 3-sprint plan with deliverables, milestones, dependencies, and a timeline. Include a Mermaid gantt chart showing the sprint timeline and milestones. Use \`\`\`mermaid ... \`\`\` blocks. Format in markdown.`,
+      prompt: `Create a product roadmap for ${projectName}. Include: 3-sprint plan with deliverables, milestones, dependencies, and a timeline. Include a Mermaid gantt chart showing the sprint timeline and milestones. ${MERMAID_RULES} Format in markdown.`,
     },
     {
       type: "business",
       title: `${projectName} — Business Strategy`,
-      prompt: `Create a business strategy for ${projectName}. Include: revenue model, GTM strategy, competitive landscape, business risks, and success KPIs. You can include a Mermaid pie chart for revenue breakdown. Use \`\`\`mermaid ... \`\`\` blocks. Format in markdown.`,
+      prompt: `Create a business strategy for ${projectName}. Include: revenue model, GTM strategy, competitive landscape, business risks, and success KPIs. You can include a Mermaid pie chart for revenue breakdown. ${MERMAID_RULES} Format in markdown.`,
     },
   ]
 }
