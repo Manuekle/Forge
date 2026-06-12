@@ -67,6 +67,34 @@ Every selection, skip, rerun, revision, vote and halt is persisted to the run's 
 
 ## Microsoft Foundry IQ Integration
 
+Forge leverages **Microsoft Foundry IQ** as its reasoning and grounding layer. Every run follows a traceable path through IQ's capabilities:
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant App as Forge App
+    participant Orch as Orchestrator
+    participant IQ as Foundry IQ
+    participant Search as Azure AI Search
+    participant Model as Grok Reasoning
+
+    User->>App: Submit project brief
+    App->>Orch: Start orchestration run
+    Orch->>IQ: iq.intent.parse(brief)
+    IQ->>Search: iq.knowledge.retrieve(brief)
+    Search-->>IQ: [S1]...[Sn] grounded sources
+    IQ-->>Orch: Execution plan + citations
+    Orch->>Orch: Route agents in dependency order
+    loop Agent pipeline
+        Orch->>Model: Agent prompt + grounded sources
+        Model-->>Orch: Agent output + inline [S#] citations
+        Orch->>Orch: QA critique & revision loop
+    end
+    Orch->>Orch: Weighted vote tally → run confidence
+    Orch-->>App: Blueprint artifacts + full IQ trace
+    App-->>User: Render blueprint, graph & timeline
+```
+
 | Capability | How Forge uses it |
 |---|---|
 | **Agentic reasoning** | All agent + orchestrator completions run on Azure AI Foundry (Grok reasoning deployment) with retry/backoff and rate-limit handling |
@@ -100,6 +128,15 @@ Skipped agents skip their artifacts too — the blueprint only contains work tha
 - **Code workspace** — engineer agent scaffolds a starter codebase from the blueprint
 - **One-click export** — push the blueprint to **GitHub**, sync tasks to **Jira** or **Linear**, export Markdown
 - **Dual-theme premium UI** — dark/light with View Transitions, fully responsive
+
+## Prerequisites
+
+Before you begin, ensure you have the following installed:
+
+- **Node.js** 20.x or later
+- **npm** 10.x or later (or **pnpm** / **yarn**)
+- **PostgreSQL** 15+ (optional — Forge runs with `STORE_DRIVER=memory` for zero-setup development with no database needed)
+- **Git**
 
 ## Quick Start
 
@@ -139,6 +176,38 @@ AZURE_SEARCH_INDEX=""
 
 ## Architecture
 
+Forge's core is a **dynamic execution graph** — not a linear prompt chain. Each run is planned, routed, critiqued, and voted on by specialist agents:
+
+```mermaid
+flowchart TD
+    A["📝 User Brief"] --> B["🧭 Orchestrator<br/>Plan execution graph"]
+    B --> C{"Select & order<br/>agents"}
+    C --> D["📋 PM Agent<br/>PRD & stories"]
+    C --> E["🎨 UX Agent<br/>Flows & personas"]
+    C --> F["🏗️ Architect<br/>System design"]
+    C --> G["🔍 QA Agent<br/>Risks & critique"]
+    C --> H["🗓️ Scrum Agent<br/>Roadmap"]
+    C --> I["📈 Business Agent<br/>Business case"]
+    D --> J["🔍 QA reviews output"]
+    E --> J
+    F --> J
+    J --> K{"High-severity<br/>findings?"}
+    K -->|Yes → revise| D
+    K -->|Yes → revise| E
+    K -->|Yes → revise| F
+    K -->|No| L["🗳️ Weighted vote"]
+    L --> M["✅ Consensus + dissent"]
+    M --> N["📦 Blueprint Pack<br/>7 artifacts versioned"]
+    N --> O["📤 Export<br/>GitHub / Jira / Linear"]
+
+    style A fill:#1a1a2e,stroke:#e94560,color:#fff
+    style B fill:#16213e,stroke:#0f3460,color:#fff
+    style N fill:#0f3460,stroke:#e94560,color:#fff
+    style O fill:#1a1a2e,stroke:#533483,color:#fff
+```
+
+### Directory structure
+
 ```
 src/
 ├── app/                  # Next.js 15 App Router — landing, dashboard, workspace, REST API
@@ -156,6 +225,8 @@ src/
 └── db/schema.ts          # Drizzle schema — projects, runs, decisions, artifacts, tasks
 ```
 
+### Technology stack
+
 | Layer | Technology |
 |-------|-----------|
 | Framework | Next.js 15 (App Router) + React 19 + TypeScript |
@@ -164,6 +235,84 @@ src/
 | Database | PostgreSQL (Supabase) + Drizzle ORM |
 | Auth | Auth.js — JWT sessions, Microsoft Entra ID + demo credentials |
 | UI | TailwindCSS 4, Framer Motion, Monaco, Mermaid |
+
+## Deployment
+
+### Production build
+
+```bash
+npm run build
+npm start
+```
+
+### Deploy to Vercel
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FManuekle%2FForge)
+
+1. Push the repo to GitHub
+2. Import the project in [Vercel](https://vercel.com)
+3. Set the required environment variables (see [Configuration](#configuration))
+4. Deploy — zero-config for Next.js
+
+### Docker
+
+```dockerfile
+# Coming soon — a Dockerfile and docker-compose.yml are in progress
+```
+
+### Environment variables
+
+All configuration is done through environment variables. Copy `.env.example` and fill in:
+
+| Variable | Required | Description |
+|---|---|---|
+| `DATABASE_URL` | With Postgres | PostgreSQL connection string |
+| `STORE_DRIVER` | No | `"postgres"` or `"memory"` (default: `"memory"`) |
+| `AUTH_SECRET` | Yes | Session encryption key (`openssl rand -base64 32`) |
+| `AZURE_OPENAI_ENDPOINT` | For AI features | Azure AI Foundry endpoint URL |
+| `AZURE_OPENAI_API_KEY` | For AI features | API key for the model deployment |
+| `AZURE_OPENAI_DEPLOYMENT` | For AI features | Deployment name (e.g. `grok-4-20-reasoning`) |
+| `AZURE_SEARCH_ENDPOINT` | No | Azure AI Search endpoint |
+| `AZURE_SEARCH_KEY` | No | Azure AI Search admin key |
+| `AZURE_SEARCH_INDEX` | No | Azure AI Search index name |
+
+## Troubleshooting
+
+| Problem | Likely cause | Solution |
+|---|---|---|
+| `Cannot find module` | Dependencies not installed | Run `npm install` |
+| `DATABASE_URL is not set` | Missing environment variable | Copy `.env.example` → `.env` and fill in, or set `STORE_DRIVER=memory` |
+| `401 Unauthorized` on login | Demo user not seeded | Run `npm run db:seed` |
+| AI responses are empty / fallback | Missing Azure credentials or model unreachable | Check `AZURE_OPENAI_ENDPOINT`, key, and deployment name. Forge will fall back to deterministic responses — this is expected when no AI is configured |
+| `Rate limit (429)` | Too many concurrent requests | Forge handles retries with exponential backoff; reduce concurrent runs or increase your model's TPM quota |
+| `Store driver "postgres" not configured` | `.env` missing `DATABASE_URL` | Either configure Postgres or set `STORE_DRIVER=memory` |
+| UI shows "No runs" | Demo workspace not seeded | Ensure you ran `npm run db:seed` and signed in as `demo@forge.dev` |
+
+## Testing
+
+Forge does not yet include a formal test suite. Contributions are welcome! The project is structured to support:
+
+- **Unit tests** for `lib/orchestrator.ts`, `lib/foundry-iq.ts`, `lib/knowledge.ts`
+- **Integration tests** for the orchestration pipeline with mock agents
+- **E2E tests** for the UI using Playwright
+
+## Contributing
+
+Contributions are welcome! Here's how to get started:
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-idea`)
+3. Commit your changes (`git commit -m 'Add amazing idea'`)
+4. Push to the branch (`git push origin feature/amazing-idea`)
+5. Open a Pull Request
+
+### Development guidelines
+
+- **Code style** — ESLint is configured; run `npm run lint` before committing
+- **Type safety** — Keep TypeScript strict mode on; avoid `any` and `as` casts where possible
+- **Architecture** — Keep agent logic in `lib/`, UI in `components/`, routes in `app/`
+- **Fallbacks** — Every AI-dependent function must have a deterministic fallback so the app works offline
+- **Grounding** — Always use `[S#]` citation markers when injecting retrieved knowledge into prompts
 
 ## Reliability & Safety
 
