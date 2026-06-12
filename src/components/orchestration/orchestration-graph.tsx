@@ -46,8 +46,6 @@ export function OrchestrationGraph({ view }: { view: LiveView }) {
     loopsByTarget.set(e.to, list)
   }
 
-  const activeIndex = nodes.findIndex((n) => n.active)
-
   return (
     <div className="relative font-mono text-xs leading-relaxed">
       {strategy && (
@@ -80,15 +78,14 @@ export function OrchestrationGraph({ view }: { view: LiveView }) {
 
       {/* Agents */}
       <div className="flex flex-col gap-px">
-        {nodes.map((node, i) => {
+        {nodes.map((node) => {
           const loops = loopsByTarget.get(node.agent) ?? []
-          const isActive = i === activeIndex
           return (
             <div key={node.agent}>
               {loops.map((loop, j) => (
                 <RevisionNote key={j} from={loop.from} to={node.agent} reason={loop.reason} />
               ))}
-              <AgentRow node={node} isActive={isActive} />
+              <AgentRow node={node} />
             </div>
           )
         })}
@@ -121,10 +118,8 @@ export function OrchestrationGraph({ view }: { view: LiveView }) {
 
 function AgentRow({
   node,
-  isActive,
 }: {
   node: AgentNode
-  isActive: boolean
 }) {
   const agent = AGENTS[node.agent]
   const color = agent?.color ?? "#E85002"

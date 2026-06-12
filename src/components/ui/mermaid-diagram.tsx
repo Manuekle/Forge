@@ -108,7 +108,6 @@ export function MermaidDiagram({ definition }: { definition: string }) {
     }
     render()
     return () => { cancelled = true }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [definition, id, isDark])
 
   if (error) {

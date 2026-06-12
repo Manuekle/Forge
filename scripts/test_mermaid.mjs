@@ -7,7 +7,6 @@ const archContent = fs.readFileSync(process.argv[2] || '/tmp/arch_v4_full.txt', 
 const archMermaid = archContent.split('```mermaid');
 for (let i = 1; i < archMermaid.length; i++) {
   const block = archMermaid[i].split('```')[0].trim();
-  const firstLine = block.split('\n')[0].trim();
   diagrams['arch_block_' + i] = block;
 }
 

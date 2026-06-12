@@ -37,7 +37,6 @@ import {
   DatabaseIcon,
   ArrowRight02Icon,
   Cancel01Icon,
-  Edit01Icon,
 } from "@hugeicons/core-free-icons"
 import { Icon, type IconSvgElement } from "@/components/ui/icon"
 import type { StoredProject, StoredDecision, StoredArtifact, StoredRun } from "@/lib/store"

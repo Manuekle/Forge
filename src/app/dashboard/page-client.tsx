@@ -10,13 +10,12 @@ import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Tooltip } from "@/components/ui/tooltip"
 import { CreateProjectModal } from "@/components/shared/create-project-modal"
 import { AGENTS } from "@/lib/constants"
 import { stripMarkdown } from "@/components/ui/markdown"
 import type { StoredProject } from "@/lib/store"
 import {
-  ArrowRight01Icon, ChatBotIcon, Layers01Icon, AnalyticsUpIcon, SparklesIcon, AlgorithmIcon, Clock01Icon,
+  ArrowRight01Icon, Layers01Icon, AnalyticsUpIcon, SparklesIcon, AlgorithmIcon, Clock01Icon,
   Folder01Icon, BrainIcon, File01Icon, BarChartIcon,
 } from "@hugeicons/core-free-icons"
 import { Icon } from "@/components/ui/icon"
@@ -29,8 +28,6 @@ type Activity = {
   projectId: string
   timestamp: string
 }
-
-const teamAgentKeys = ["pm", "ux", "architect", "qa", "scrum", "business"] as const
 
 const stagger = {
   hidden: {},

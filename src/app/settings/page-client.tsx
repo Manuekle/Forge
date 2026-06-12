@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button"
 import { useToast } from "@/components/ui/toast"
 import { ThemeToggle } from "@/components/theme-toggle"
 import {
-  SparklesIcon, Settings02Icon, UserIcon, Building01Icon, MoonIcon, Key01Icon, Alert01Icon,
+  SparklesIcon, UserIcon, Building01Icon, MoonIcon, Key01Icon, Alert01Icon,
 } from "@hugeicons/core-free-icons"
 import { Icon, type IconSvgElement } from "@/components/ui/icon"
 
