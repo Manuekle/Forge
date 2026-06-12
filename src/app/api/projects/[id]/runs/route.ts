@@ -5,7 +5,8 @@ import { requireProjectAccess } from "@/lib/api-auth"
 
 // A full orchestration is many sequential model calls (plan, agents,
 // checkpoints, consensus, artifacts) — minutes of wall time, not seconds.
-export const maxDuration = 800
+// 300 is the Vercel Hobby-plan ceiling; raise to 800 on Pro.
+export const maxDuration = 300
 
 export async function GET(
   _request: Request,
