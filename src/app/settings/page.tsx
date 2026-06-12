@@ -6,6 +6,7 @@ export const metadata: Metadata = {
   description:
     "Manage your profile, workspace, API configuration and account settings.",
   robots: { index: false, follow: false },
+  alternates: { canonical: "/settings" },
   openGraph: {
     title: "Settings",
     description: "Manage your profile, workspace, API configuration and account settings.",

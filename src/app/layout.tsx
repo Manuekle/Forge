@@ -30,8 +30,13 @@ export const viewport: Viewport = {
   ],
 }
 
+const baseUrl = "https://forgems.vercel.app"
+
 export const metadata: Metadata = {
-  metadataBase: new URL("https://forge.dev"),
+  metadataBase: new URL(baseUrl),
+  verification: {
+    google: "0RPzGmepK5heQ-2axeEVsJ9o2FVPXcNp67TZSjmjF0E",
+  },
   title: {
     template: "%s | Forge",
     default: "Forge — AI-Powered Product Simulation Platform",
@@ -71,7 +76,7 @@ export const metadata: Metadata = {
     title: "Forge — AI-Powered Product Simulation Platform",
     description:
       "Six AI agents. One product team. Infinite possibilities.",
-    url: "https://forge.dev",
+    url: baseUrl,
     siteName: "Forge",
     type: "website",
     locale: "en_US",
@@ -90,7 +95,19 @@ export const metadata: Metadata = {
     description:
       "Six AI agents. One product team. Infinite possibilities.",
     images: ["/og-image.png"],
+    creator: "@forge",
+    site: "@forge",
   },
+}
+
+const orgJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: "Forge",
+  url: baseUrl,
+  logo: `${baseUrl}/logo.png`,
+  description:
+    "AI-powered product simulation platform — six specialized AI agents debate, vote and deliver complete product plans.",
 }
 
 export default function RootLayout({
@@ -101,6 +118,10 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning className={`${syne.variable} ${interTight.variable} ${jetbrainsMono.variable}`}>
       <body suppressHydrationWarning>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }}
+        />
         <Providers>{children}</Providers>
       </body>
     </html>

@@ -6,6 +6,7 @@ export const metadata: Metadata = {
   description:
     "Sign in to your Forge account to continue building.",
   robots: { index: false },
+  alternates: { canonical: "/auth/signin" },
   openGraph: {
     title: "Sign In",
     description: "Sign in to Forge — the AI-powered product simulation platform.",

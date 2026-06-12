@@ -7,6 +7,7 @@ export const metadata: Metadata = {
     "View your projects, recent activity, and key metrics at a glance.",
   // Auth-gated — robots.txt disallow alone still lets linked URLs get indexed.
   robots: { index: false, follow: false },
+  alternates: { canonical: "/dashboard" },
   openGraph: {
     title: "Dashboard",
     description: "View your projects, recent activity, and key metrics at a glance.",

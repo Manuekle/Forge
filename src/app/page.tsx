@@ -61,7 +61,7 @@ const appJsonLd = {
   operatingSystem: "Web",
   description:
     "AI-powered product simulation platform. Six specialized AI agents debate, vote and generate PRDs, backlogs, architecture and roadmaps.",
-  url: "https://forge.dev",
+  url: "https://forgems.vercel.app",
   offers: {
     "@type": "Offer",
     price: "0",
@@ -70,23 +70,9 @@ const appJsonLd = {
   },
 }
 
-const orgJsonLd = {
-  "@context": "https://schema.org",
-  "@type": "Organization",
-  name: "Forge",
-  url: "https://forge.dev",
-  logo: "https://forge.dev/logo.png",
-  description:
-    "AI-powered product simulation platform — six specialized AI agents debate, vote and deliver complete product plans.",
-}
-
 export default function Page() {
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }}
-      />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(appJsonLd) }}

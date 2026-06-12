@@ -6,6 +6,7 @@ export const metadata: Metadata = {
   description:
     "Meet your AI product team — six specialist agents orchestrated by Microsoft Foundry IQ.",
   robots: { index: false, follow: false },
+  alternates: { canonical: "/agents" },
   openGraph: {
     title: "Agents",
     description: "Your AI product team. Orchestrated by Microsoft Foundry IQ.",

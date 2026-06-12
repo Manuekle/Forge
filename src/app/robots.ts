@@ -9,6 +9,6 @@ export default function robots(): MetadataRoute.Robots {
         disallow: ["/api/", "/dashboard", "/projects", "/agents", "/settings", "/auth/"],
       },
     ],
-    sitemap: "https://forge.dev/sitemap.xml",
+    sitemap: "https://forgems.vercel.app/sitemap.xml",
   }
 }
