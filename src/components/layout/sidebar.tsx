@@ -71,7 +71,7 @@ function UserCard() {
           <Icon icon={AiUserIcon} size={18} />
         </div>
         <div className="min-w-0 flex-1">
-          <div className="truncate text-xs font-medium text-text-primary">Dana Reyes</div>
+          <div className="truncate text-xs font-medium text-text-primary">Jane Doe</div>
           <div className="flex items-center gap-1 text-[10px] text-muted">
             <Icon icon={SparklesIcon} size={10} className="text-brand" />
             Forge Pro

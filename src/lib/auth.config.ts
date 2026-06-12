@@ -37,7 +37,7 @@ export const authConfig: NextAuthConfig = {
             .insert(schema.users)
             .values({
               email,
-              name: "Dana Reyes",
+              name: "Jane Doe",
               emailVerified: new Date(),
             })
             .returning()

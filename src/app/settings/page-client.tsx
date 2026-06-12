@@ -36,7 +36,7 @@ const fadeUp = {
 export default function SettingsPage() {
   const { toast } = useToast()
 
-  const [profile, setProfile] = useState(() => load(LS_PROFILE, { name: "Dana Reyes", email: "dana@forge.dev" }))
+  const [profile, setProfile] = useState(() => load(LS_PROFILE, { name: "Jane Doe", email: "jane@forge.dev" }))
   const [workspace, setWorkspace] = useState(() => load(LS_WORKSPACE, { name: "Forge Team" }))
   const [api, setApi] = useState(() => load(LS_API, { endpoint: "", key: "", deployment: "grok-4-20-reasoning", timeout: "180000" }))
   const [deleting, setDeleting] = useState(false)

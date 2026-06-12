@@ -40,7 +40,7 @@ async function main() {
   if (!user) {
     const [created] = await db
       .insert(schema.users)
-      .values({ email, name: "Dana Reyes", emailVerified: new Date() })
+      .values({ email, name: "Jane Doe", emailVerified: new Date() })
       .returning()
     user = created
     console.log("✓ Demo user created:", user.id)
