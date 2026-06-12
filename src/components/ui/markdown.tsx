@@ -82,7 +82,7 @@ export function Markdown({ content }: { content: string }) {
           blocks.push(<MermaidDiagram key={idx} definition={codeLines.join("\n")} />)
         } else {
           blocks.push(
-            <div key={idx} className="my-3 overflow-auto rounded-2xl bg-black/30 p-4 font-mono text-[11px] leading-relaxed text-text-secondary ring-hair">
+            <div key={idx} className="my-3 overflow-auto rounded-2xl bg-surface-inset p-4 font-mono text-[11px] leading-relaxed text-text-secondary ring-hair">
               {lang && <div className="mb-2 text-[10px] font-medium text-muted">{lang}</div>}
               <pre className="m-0 whitespace-pre-wrap">{codeLines.join("\n")}</pre>
             </div>

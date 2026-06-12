@@ -88,7 +88,12 @@ function ProjectPageInner({ projectId }: { projectId: string }) {
   const [showExport, setShowExport] = useState(false)
   const [showRunContext, setShowRunContext] = useState(false)
   const [selectedVersion, setSelectedVersion] = useState(1)
+  const [debatingTopic, setDebatingTopic] = useState<string | null>(null)
+  const [runElapsed, setRunElapsed] = useState(0)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  // Run id that existed before the user pressed "New run" — the poll ignores
+  // it so a stale completed run can't be mistaken for the new one finishing.
+  const baselineRunRef = useRef<string | null>(null)
 
   function load(onLoaded?: (artifacts: StoredArtifact[]) => void) {
     Promise.all([
@@ -123,6 +128,15 @@ function ProjectPageInner({ projectId }: { projectId: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId])
 
+  // Elapsed-time ticker while a run executes — concrete feedback that work is
+  // happening even when the progress message hasn't changed yet.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (!running) { setRunElapsed(0); return }
+    const t = setInterval(() => setRunElapsed((s) => s + 1), 1000)
+    return () => clearInterval(t)
+  }, [running])
+
   /** Poll the run row while executing — events grow, graph animates live. */
   function startPolling() {
     if (pollRef.current) return
@@ -135,6 +149,8 @@ function ProjectPageInner({ projectId }: { projectId: string }) {
         setRuns(Array.isArray(all) ? all : [])
         const latest = all[0]
         if (!latest) return
+        // The new run hasn't been created yet — keep waiting.
+        if (latest.id === baselineRunRef.current && latest.status !== "running") return
         if (latest.status === "completed") {
           stopPolling()
           load((fresh) => {
@@ -166,26 +182,53 @@ function ProjectPageInner({ projectId }: { projectId: string }) {
     setShowRunContext(false)
     setRunning(true)
     setActiveTab("orchestration")
+    baselineRunRef.current = runs[0]?.id ?? null
     fetch(`/api/projects/${projectId}/runs`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ brief }),
-    }).catch(() => {})
+    })
+      .then(async (res) => {
+        if (res.ok || res.status === 500) return // success and run-failure are handled by the poll
+        const body = await res.json().catch(() => null)
+        stopPolling()
+        toast({
+          title: "Run could not start",
+          description: body?.error ?? `The server rejected the request (${res.status}).`,
+          variant: "error",
+        })
+        load()
+      })
+      .catch(() => {
+        stopPolling()
+        toast({ title: "Network error", description: "Could not reach the server to start the run.", variant: "error" })
+      })
     startPolling()
   }
 
   async function handleAddDecision() {
-    if (!newTopic) return
+    if (!newTopic || debatingTopic) return
     const topic = newTopic
     setNewTopic("")
+    setDebatingTopic(topic)
+    toast({ title: "Debate started", description: `"${topic}" — the team is weighing in.`, variant: "brand" })
     fetch(`/api/projects/${projectId}/decisions`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ topic }),
-    }).then(() => {
-      load()
-      toast({ title: "Debate started", description: `"${topic}" — the team is weighing in.`, variant: "brand" })
     })
+      .then((res) => {
+        if (!res.ok) {
+          toast({ title: "Debate failed", description: "The agents could not debate this topic. Try again.", variant: "error" })
+          return
+        }
+        load()
+        toast({ title: "Consensus reached", description: `The team resolved "${topic}".`, variant: "success" })
+      })
+      .catch(() => {
+        toast({ title: "Network error", description: "Could not reach the server to start the debate.", variant: "error" })
+      })
+      .finally(() => setDebatingTopic(null))
   }
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
@@ -300,7 +343,7 @@ function ProjectPageInner({ projectId }: { projectId: string }) {
       <div className="pointer-events-none fixed inset-0 bg-noise" />
       <div className="flex min-h-0 flex-1">
         {/* Main Content */}
-        <div className="flex-1 overflow-auto p-4 sm:p-6 lg:p-8">
+        <div className="flex-1 p-4 sm:p-6 lg:p-8">
           <div className="max-w-[820px]">
             {/* Progress + Status Bar + Run control */}
             <div className="mb-7 flex flex-wrap items-center gap-3">
@@ -324,7 +367,7 @@ function ProjectPageInner({ projectId }: { projectId: string }) {
                   exit={{ opacity: 0, height: 0, marginBottom: 0 }}
                   className="overflow-hidden"
                 >
-                  <div className="flex items-center gap-2.5 rounded-2xl bg-surface-2 px-4 py-3 ring-hair lift-1">
+                  <div className="flex items-center gap-2.5 rounded-2xl bg-surface-2 px-4 py-3 ring-hair lift-1" role="status" aria-live="polite">
                     <span className="relative flex h-2.5 w-2.5">
                       <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand opacity-50" />
                       <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-brand" />
@@ -332,8 +375,9 @@ function ProjectPageInner({ projectId }: { projectId: string }) {
                     <span className="text-xs font-medium text-brand">
                       {latestRun?.status === "running" && latestRun.progress ? latestRun.progress : "Starting agents…"}
                     </span>
-                    <span className="ml-auto font-mono text-[10px] text-muted">
-                      {view.timeline.length} events
+                    <span className="ml-auto flex items-center gap-3 font-mono text-[10px] text-muted">
+                      <span>{view.timeline.length} events</span>
+                      <span className="tabular-nums">{formatDuration(runElapsed)}</span>
                     </span>
                   </div>
                 </motion.div>
@@ -349,6 +393,7 @@ function ProjectPageInner({ projectId }: { projectId: string }) {
                   <button
                     key={t.id}
                     onClick={() => setActiveTab(t.id)}
+                    aria-pressed={active}
                     className={cn(
                       "relative flex items-center gap-2 rounded-full px-4 py-2 text-sm transition-colors duration-200",
                       active ? "text-text-primary" : "text-text-secondary hover:text-text-primary"
@@ -424,6 +469,7 @@ function ProjectPageInner({ projectId }: { projectId: string }) {
                       <button
                         key={t}
                         onClick={() => { setActiveDeliverable(t); setSelectedVersion(1) }}
+                        aria-pressed={active}
                         className={cn(
                           "whitespace-nowrap rounded-full px-4 py-1.5 text-sm transition-all duration-200",
                           active
@@ -494,16 +540,29 @@ function ProjectPageInner({ projectId }: { projectId: string }) {
                         icon={<Icon icon={Add01Icon} size={16} />}
                       />
                     </div>
-                    <Button onClick={handleAddDecision} disabled={!newTopic}>
+                    <Button onClick={handleAddDecision} disabled={!newTopic || !!debatingTopic}>
                       Add
                     </Button>
                   </div>
+
+                  {debatingTopic && (
+                    <div className="flex items-center gap-3 rounded-[var(--radius-card)] bg-surface-2 px-5 py-4 ring-hair lift-1" role="status" aria-live="polite">
+                      <span className="relative flex h-2.5 w-2.5 flex-shrink-0">
+                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand opacity-50" />
+                        <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-brand" />
+                      </span>
+                      <div className="min-w-0">
+                        <div className="truncate text-sm font-medium text-text-primary">{debatingTopic}</div>
+                        <div className="text-xs text-text-secondary">PM, Architect and QA are debating — this usually takes under a minute.</div>
+                      </div>
+                    </div>
+                  )}
 
                   {mappedDecisions.map((d) => (
                     <AgentDebateCard key={d.id} decision={d} />
                   ))}
 
-                  {mappedDecisions.length === 0 && !running && (
+                  {mappedDecisions.length === 0 && !running && !debatingTopic && (
                     <EmptyState icon={Message01Icon} title="No debates yet" desc="Add a topic or start a run to watch the team deliberate." />
                   )}
                 </div>
@@ -565,7 +624,7 @@ function ProjectPageInner({ projectId }: { projectId: string }) {
         </div>
 
         {/* Right Panel */}
-        <div className="hidden w-[280px] flex-shrink-0 flex-col overflow-auto p-5 shadow-[inset_1px_0_0_rgba(255,255,255,0.06)] xl:flex">
+        <div className="hidden w-[280px] flex-shrink-0 flex-col overflow-auto p-5 shadow-[inset_1px_0_0_var(--color-hairline)] xl:flex">
           <PanelHeading icon={SparklesIcon}>AI Team</PanelHeading>
           <div className="mb-7 flex flex-col gap-1">
             <AgentTeamList view={view} />

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { store } from "@/lib/store"
 import { requireProjectAccess } from "@/lib/api-auth"
-import { clampText } from "@/lib/guard"
+import { clampText, safeJson } from "@/lib/guard"
 
 export async function GET(
   _request: Request,
@@ -23,12 +23,12 @@ export async function PATCH(
   const access = await requireProjectAccess(id)
   if (!access.ok) return access.response
 
-  const body = await request.json()
+  const body = await safeJson(request)
   // Only allow a safe, explicit subset of fields to be patched.
   const patch: Record<string, unknown> = {}
   if (body.name !== undefined) patch.name = clampText(body.name, 120)
   if (body.description !== undefined) patch.description = clampText(body.description, 2000)
-  if (body.status !== undefined && ALLOWED_STATUS.has(body.status)) patch.status = body.status
+  if (typeof body.status === "string" && ALLOWED_STATUS.has(body.status)) patch.status = body.status
   if (typeof body.progress === "number") patch.progress = Math.min(100, Math.max(0, body.progress))
 
   const updated = await store.updateProject(id, patch)

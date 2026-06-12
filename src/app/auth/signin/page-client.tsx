@@ -39,7 +39,10 @@ export default function SignInPage() {
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-canvas p-6">
       <div className="pointer-events-none absolute inset-0 bg-noise" />
-      <div className="pointer-events-none absolute left-1/2 top-1/3 h-[520px] w-[520px] -translate-x-1/2 rounded-full opacity-70 blur-3xl aurora" />
+      <div
+        className="pointer-events-none absolute left-1/2 top-1/3 h-[560px] w-[820px] -translate-x-1/2 -translate-y-1/2"
+        style={{ background: "radial-gradient(50% 50% at 50% 50%, rgba(232,80,2,0.12) 0%, rgba(232,80,2,0.04) 50%, transparent 75%)" }}
+      />
 
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -61,6 +64,27 @@ export default function SignInPage() {
         <form onSubmit={handleSubmit} className="space-y-4 rounded-[var(--radius-panel)] glass-strong p-7">
           <h1 className="text-center text-lg font-semibold text-text-primary" style={{ fontFamily: "var(--font-syne)" }}>Welcome back</h1>
 
+          <Button
+            type="button"
+            variant="outline"
+            size="lg"
+            className="w-full"
+            disabled={loading}
+            onClick={() => {
+              setLoading(true)
+              signIn("microsoft-entra-id", { callbackUrl: "/dashboard" })
+            }}
+          >
+            <Image src="/sponsors/microsoft.svg" alt="" width={15} height={15} className="h-[15px] w-[15px]" />
+            Continue with Microsoft
+          </Button>
+
+          <div className="flex items-center gap-3">
+            <div className="h-px flex-1 bg-hairline" />
+            <span className="text-xs text-muted">or</span>
+            <div className="h-px flex-1 bg-hairline" />
+          </div>
+
           <div>
             <label className="mb-1.5 block text-xs font-medium text-text-secondary">Email</label>
             <Input type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required icon={<Icon icon={Mail01Icon} size={15} />} />
@@ -80,15 +104,6 @@ export default function SignInPage() {
           <Button type="submit" size="lg" className="w-full" disabled={loading}>
             {loading ? "Signing in…" : <><Icon icon={SparklesIcon} size={15} /> Sign in</>}
           </Button>
-
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-hairline" />
-            </div>
-            <div className="relative flex justify-center text-xs">
-              <span className="bg-[var(--glass-strong-bg)] px-2 text-muted">or</span>
-            </div>
-          </div>
 
           <Button
             type="button"
@@ -111,6 +126,11 @@ export default function SignInPage() {
 
           <p className="text-center text-xs text-muted">
             <span className="font-mono text-brand">demo@forge.dev</span> / <span className="font-mono text-brand">forge</span>
+          </p>
+
+          <p className="text-center text-xs text-muted">
+            New to Forge?{" "}
+            <a href="/auth/register" className="font-medium text-brand hover:text-brand-hover">Create an account</a>
           </p>
         </form>
       </motion.div>

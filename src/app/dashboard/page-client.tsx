@@ -218,10 +218,7 @@ export default function DashboardPage() {
                       </div>
                       <h2 className="text-sm font-semibold text-text-primary" style={{ fontFamily: "var(--font-syne)" }}>Agent activity</h2>
                     </div>
-                    <Card variant="elevated" className="relative overflow-hidden p-1">
-                      {activities.length > 0 && (
-                        <div className="absolute left-8 top-10 bottom-10 w-px bg-hairline" />
-                      )}
+                    <Card variant="elevated" className="p-1">
                       {activities.slice(0, 6).map((a) => {
                         const agentData = AGENTS[a.agent as keyof typeof AGENTS]
                         return (

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { store } from "@/lib/store"
 import { requireProjectAccess } from "@/lib/api-auth"
-import { clampText } from "@/lib/guard"
+import { clampText, safeJson } from "@/lib/guard"
 
 export async function GET(
   _request: Request,
@@ -22,7 +22,7 @@ export async function POST(
   const access = await requireProjectAccess(id)
   if (!access.ok) return access.response
 
-  const body = await request.json()
+  const body = await safeJson(request)
   const type = clampText(body.type, 40)
   const title = clampText(body.title, 200)
   const content = clampText(body.content, 100000)

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { store } from "@/lib/store"
 import { requireUser } from "@/lib/api-auth"
-import { clampText } from "@/lib/guard"
+import { clampText, safeJson } from "@/lib/guard"
 
 export async function GET() {
   const authed = await requireUser()
@@ -19,7 +19,7 @@ export async function POST(request: Request) {
   const authed = await requireUser()
   if (!authed.ok) return authed.response
 
-  const body = await request.json()
+  const body = await safeJson(request)
   const name = clampText(body.name, 120)
   const description = clampText(body.description, 2000)
   const template = clampText(body.template, 60) || undefined

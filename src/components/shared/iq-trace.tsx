@@ -32,7 +32,7 @@ export function IqTrace({ className }: IqTraceProps) {
           {traces.map((t, i) => (
             <div key={i} className="relative -ml-px flex gap-4 border-l border-hairline py-1 pl-4">
               <div className="absolute left-[-3.5px] top-2 h-[6px] w-[6px] rounded-full"
-                style={{ backgroundColor: t.action.includes("consensus") || t.action.includes("complete") ? "#E85002" : "rgba(255,255,255,0.15)" }} />
+                style={{ backgroundColor: t.action.includes("consensus") || t.action.includes("complete") ? "#E85002" : "var(--color-hairline-strong)" }} />
               <span className="text-brand w-[65px] flex-shrink-0">{t.time}</span>
               <span className="text-text-secondary w-[160px] flex-shrink-0">{t.action}</span>
               <span className="text-muted whitespace-nowrap">{t.detail}</span>

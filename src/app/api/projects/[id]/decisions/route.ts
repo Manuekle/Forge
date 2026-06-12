@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { store } from "@/lib/store"
 import { complete } from "@/lib/foundry-iq"
 import { requireProjectAccess } from "@/lib/api-auth"
-import { sanitizeForPrompt } from "@/lib/guard"
+import { sanitizeForPrompt, safeJson } from "@/lib/guard"
 
 const DEBATE_AGENTS = [
   {
@@ -41,7 +41,7 @@ export async function POST(
   const access = await requireProjectAccess(id)
   if (!access.ok) return access.response
 
-  const body = await request.json()
+  const body = await safeJson(request)
   const topic = sanitizeForPrompt(body.topic, 500)
 
   if (!topic) {

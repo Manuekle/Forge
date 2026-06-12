@@ -25,8 +25,8 @@ export function AgentDebateCard({ decision }: AgentDebateCardProps) {
       <div className="flex items-center gap-3 px-5 py-3.5">
         <div className="flex gap-1.5">
           <div className="h-2.5 w-2.5 rounded-full bg-brand" />
-          <div className="h-2.5 w-2.5 rounded-full bg-white/10" />
-          <div className="h-2.5 w-2.5 rounded-full bg-white/10" />
+          <div className="h-2.5 w-2.5 rounded-full bg-text-primary/15" />
+          <div className="h-2.5 w-2.5 rounded-full bg-text-primary/15" />
         </div>
         <Badge variant={statusVariant} dot />
         <span className="ml-auto truncate text-xs text-text-secondary">{decision.topic}</span>

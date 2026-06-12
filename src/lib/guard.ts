@@ -21,3 +21,13 @@ export function sanitizeForPrompt(value: unknown, max = 4000): string {
     .replace(/^\s*(system|assistant|developer)\s*:/gim, "$1​:")
     .replace(/ignore (all|any|previous|prior) (instructions|prompts)/gi, "[redacted]")
 }
+
+/** Parse a request body as JSON, returning {} instead of throwing on malformed input. */
+export async function safeJson(request: Request): Promise<Record<string, unknown>> {
+  try {
+    const body = await request.json()
+    return body && typeof body === "object" ? (body as Record<string, unknown>) : {}
+  } catch {
+    return {}
+  }
+}
