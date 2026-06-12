@@ -60,6 +60,9 @@
 /* ── Dark mode base ── */
 :root { color-scheme: dark; }
 
+/* Make Tailwind's `dark:` variant match the class-based theme (next-themes) */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* ── Theme switch: circular reveal (View Transitions API) ──
    Default cross-fade off; theme-toggle animates clip-path on the new
    snapshot so the incoming theme sweeps out from the toggle button. */
@@ -159,6 +162,10 @@ html.light .aurora {
   ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.18); }
   ::selection { background: rgba(232, 80, 2, 0.32); color: #fff; }
   input::placeholder, textarea::placeholder { color: var(--color-faint); }
+
+  /* Hide scrollbar while keeping scrollability (mobile tab strips) */
+  .no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
 
   /* Consistent, premium focus ring everywhere */
   :focus-visible {

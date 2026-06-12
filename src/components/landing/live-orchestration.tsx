@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react"
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion"
 import {
   AiContentGenerator01Icon, AiIdeaIcon, AiCloud02Icon, AiScanIcon, AiFolder01Icon, AiSearch02Icon,
-  AlgorithmIcon, Tick01Icon,
+  Rocket02Icon, Tick01Icon,
 } from "@hugeicons/core-free-icons"
 import { Icon } from "@/components/ui/icon"
 
@@ -183,7 +183,7 @@ export function LiveOrchestration() {
               {orchestratorBusy && !reduced && (
                 <span className="absolute inset-0 animate-ping rounded-full bg-brand opacity-20" />
               )}
-              <Icon icon={AlgorithmIcon} size={26} />
+              <Icon icon={Rocket02Icon} size={26} />
             </div>
           </div>
 

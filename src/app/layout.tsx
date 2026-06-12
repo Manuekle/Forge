@@ -3,9 +3,11 @@ import { Syne, Inter_Tight, JetBrains_Mono } from "next/font/google"
 import { Providers } from "@/components/providers"
 import "./globals.css"
 
+// Syne is a display face used only at medium/semibold/bold — don't ship
+// weights nothing renders (each weight is a separate font file on first paint).
 const syne = Syne({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
+  weight: ["500", "600", "700"],
   variable: "--font-syne",
 })
 

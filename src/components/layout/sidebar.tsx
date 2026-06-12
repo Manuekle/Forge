@@ -6,7 +6,7 @@ import Image from "next/image"
 import { signOut } from "next-auth/react"
 import { motion, AnimatePresence } from "framer-motion"
 import {
-  DashboardSquare01Icon, AiFolder01Icon, ChatBotIcon, Settings02Icon, ArrowLeft01Icon, Add01Icon, SparklesIcon, Logout01Icon, Menu01Icon, AiUserIcon, ArrowUp01Icon, Tick01Icon, Edit01Icon, Cancel01Icon
+  DashboardSquare01Icon, AiFolder01Icon, ChatBotIcon, Settings02Icon, ArrowLeft01Icon, Add01Icon, SparklesIcon, Logout01Icon, AiUserIcon, ArrowUp01Icon, Tick01Icon, Edit01Icon, Cancel01Icon
 } from "@hugeicons/core-free-icons"
 import { Icon } from "@/components/ui/icon"
 import { cn } from "@/lib/utils"
@@ -31,6 +31,8 @@ interface SidebarProps {
   projectStatus?: string
   onBack?: () => void
   onEditProject?: () => void
+  mobileOpen?: boolean
+  onMobileOpenChange?: (open: boolean) => void
 }
 
 function MobileNav({
@@ -41,46 +43,36 @@ function MobileNav({
   children: React.ReactNode
 }) {
   return (
-    <>
-      <button
-        onClick={() => onOpenChange(true)}
-        aria-label="Open menu"
-        className="fixed left-3 top-3.5 z-40 flex h-9 w-9 items-center justify-center rounded-full bg-surface-2 ring-hair lift-1 md:hidden"
-      >
-        <Icon icon={Menu01Icon} size={17} className="text-text-primary" />
-      </button>
-
-      <AnimatePresence>
-        {open && (
-          <div className="fixed inset-0 z-[70] md:hidden">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.18 }}
-              className="absolute inset-0 bg-overlay backdrop-blur-sm"
+    <AnimatePresence>
+      {open && (
+        <div className="fixed inset-0 z-[70] md:hidden">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            className="absolute inset-0 bg-overlay backdrop-blur-sm"
+            onClick={() => onOpenChange(false)}
+          />
+          <motion.div
+            initial={{ x: -280 }}
+            animate={{ x: 0 }}
+            exit={{ x: -280 }}
+            transition={{ type: "spring", stiffness: 380, damping: 36 }}
+            className="absolute inset-y-0 left-0 flex w-[264px] flex-col overflow-y-auto bg-canvas shadow-pop"
+          >
+            <button
               onClick={() => onOpenChange(false)}
-            />
-            <motion.div
-              initial={{ x: -280 }}
-              animate={{ x: 0 }}
-              exit={{ x: -280 }}
-              transition={{ type: "spring", stiffness: 380, damping: 36 }}
-              className="absolute inset-y-0 left-0 flex w-[264px] flex-col overflow-y-auto bg-canvas shadow-pop"
+              aria-label="Close menu"
+              className="absolute right-2.5 top-5 z-10 flex h-8 w-8 items-center justify-center rounded-full text-muted transition-colors hover:bg-hover-strong hover:text-text-primary"
             >
-              <button
-                onClick={() => onOpenChange(false)}
-                aria-label="Close menu"
-                className="absolute right-2.5 top-5 z-10 flex h-8 w-8 items-center justify-center rounded-full text-muted transition-colors hover:bg-hover-strong hover:text-text-primary"
-              >
-                <Icon icon={Cancel01Icon} size={15} />
-              </button>
-              {children}
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-    </>
+              <Icon icon={Cancel01Icon} size={15} />
+            </button>
+            {children}
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
   )
 }
 
@@ -162,11 +154,12 @@ function UserCard() {
   )
 }
 
-export function Sidebar({ projectMode, projectName, projectDescription, projectStatus, onEditProject }: SidebarProps) {
+export function Sidebar({ projectMode, projectName, projectDescription, projectStatus, onEditProject, mobileOpen, onMobileOpenChange }: SidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
   const [recentProjects, setRecentProjects] = useState<StoredProject[]>([])
-  const [mobileOpen, setMobileOpen] = useState(false)
+  const _mobileOpen = mobileOpen ?? false
+  const _setMobileOpen = onMobileOpenChange ?? (() => {})
 
   useEffect(() => {
     if (!projectMode) {
@@ -185,6 +178,8 @@ export function Sidebar({ projectMode, projectName, projectDescription, projectS
         status={projectStatus || "planning"}
         onBack={() => router.push("/projects")}
         onEditProject={onEditProject}
+        mobileOpen={_mobileOpen}
+        onMobileOpenChange={_setMobileOpen}
       />
     )
   }
@@ -202,7 +197,7 @@ export function Sidebar({ projectMode, projectName, projectDescription, projectS
           return (
             <button
               key={item.href}
-              onClick={() => { router.push(item.href); setMobileOpen(false) }}
+              onClick={() => { router.push(item.href); _setMobileOpen(false) }}
               className={cn(
                 "flex items-center gap-3 rounded-full px-3.5 py-2.5 text-left text-sm transition-all duration-200",
                 isActive
@@ -256,7 +251,7 @@ export function Sidebar({ projectMode, projectName, projectDescription, projectS
 
   return (
     <>
-      <MobileNav open={mobileOpen} onOpenChange={setMobileOpen}>
+      <MobileNav open={_mobileOpen} onOpenChange={_setMobileOpen}>
         {content}
       </MobileNav>
 
@@ -338,22 +333,25 @@ const wsAgents: AgentType[] = [
 ]
 
 function ProjectSidebar({
-  name, description, status, onBack, onEditProject,
+  name, description, status, onBack, onEditProject, mobileOpen, onMobileOpenChange,
 }: {
   name: string
   description: string
   status: string
   onBack: () => void
   onEditProject?: () => void
+  mobileOpen?: boolean
+  onMobileOpenChange?: (open: boolean) => void
 }) {
   const statusVariant =
     status === "active" ? "active" : status === "in_review" ? "in_review" : status === "approved" ? "approved" : status === "archived" ? "archived" : "planning"
-  const [mobileOpen, setMobileOpen] = useState(false)
+  const _mobileOpen = mobileOpen ?? false
+  const _setMobileOpen = onMobileOpenChange ?? (() => {})
 
   const content = (
     <div className="flex h-full flex-col px-2">
       <button
-        onClick={() => { onBack(); setMobileOpen(false) }}
+        onClick={() => { onBack(); _setMobileOpen(false) }}
         className="mx-1 mb-2 mt-5 flex items-center gap-1.5 self-start rounded-full px-3 py-1.5 text-xs text-muted transition-colors duration-200 hover:bg-hover hover:text-text-primary"
       >
         <Icon icon={ArrowLeft01Icon} size={14} />
@@ -407,7 +405,7 @@ function ProjectSidebar({
 
   return (
     <>
-      <MobileNav open={mobileOpen} onOpenChange={setMobileOpen}>
+      <MobileNav open={_mobileOpen} onOpenChange={_setMobileOpen}>
         {content}
       </MobileNav>
 

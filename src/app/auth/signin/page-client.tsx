@@ -8,15 +8,12 @@ import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Icon } from "@/components/ui/icon"
-import { SparklesIcon, Mail01Icon, LockIcon, Rocket01Icon } from "@hugeicons/core-free-icons"
-
-const DEMO_EMAIL = "demo@forge.dev"
-const DEMO_PASSWORD = "forge"
+import { SparklesIcon, Mail01Icon, LockIcon } from "@hugeicons/core-free-icons"
 
 export default function SignInPage() {
   const router = useRouter()
-  const [email, setEmail] = useState(DEMO_EMAIL)
-  const [password, setPassword] = useState(DEMO_PASSWORD)
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
 
@@ -104,29 +101,6 @@ export default function SignInPage() {
           <Button type="submit" size="lg" className="w-full" disabled={loading}>
             {loading ? "Signing in…" : <><Icon icon={SparklesIcon} size={15} /> Sign in</>}
           </Button>
-
-          <Button
-            type="button"
-            variant="outline"
-            size="lg"
-            className="w-full"
-            onClick={() => {
-              setEmail(DEMO_EMAIL)
-              setPassword(DEMO_PASSWORD)
-              setLoading(true)
-              setError("")
-              signIn("credentials", { email: DEMO_EMAIL, password: DEMO_PASSWORD, redirect: false }).then((r) => {
-                if (r?.error) setError("Invalid credentials")
-                else { router.push("/dashboard"); router.refresh() }
-              })
-            }}
-          >
-            <Icon icon={Rocket01Icon} size={15} /> Demo login
-          </Button>
-
-          <p className="text-center text-xs text-muted">
-            <span className="font-mono text-brand">demo@forge.dev</span> / <span className="font-mono text-brand">forge</span>
-          </p>
 
           <p className="text-center text-xs text-muted">
             New to Forge?{" "}

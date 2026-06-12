@@ -731,11 +731,19 @@ const dbStore: DataStore = {
 
   async addDecisionEntry(decisionId, agent, message) {
     const db = getDb()
-    const [d] = await db.select().from(schema.decisions).where(eq(schema.decisions.id, decisionId)).limit(1)
+    const entry = { agent, message, timestamp: new Date().toISOString() }
+    // Atomic jsonb append — no read-modify-write round trip.
+    const [d] = await db
+      .update(schema.decisions)
+      .set({ entries: sql`${schema.decisions.entries} || ${JSON.stringify([entry])}::jsonb`, status: "voting" })
+      .where(eq(schema.decisions.id, decisionId))
+      .returning({ projectId: schema.decisions.projectId })
     if (!d) return
-    const entries = [...(d.entries ?? []), { agent, message, timestamp: new Date().toISOString() }]
-    await db.update(schema.decisions).set({ entries, status: "voting" }).where(eq(schema.decisions.id, decisionId))
-    const [project] = await db.select().from(schema.projects).where(eq(schema.projects.id, d.projectId)).limit(1)
+    const [project] = await db
+      .select({ id: schema.projects.id, name: schema.projects.name })
+      .from(schema.projects)
+      .where(eq(schema.projects.id, d.projectId))
+      .limit(1)
     if (project) {
       await db.insert(schema.activities).values({
         projectId: project.id,
@@ -860,10 +868,19 @@ const dbStore: DataStore = {
   },
 
   async reorderTasks(projectId, taskIds) {
-    const db = getDb()
-    for (let i = 0; i < taskIds.length; i++) {
-      await db.update(schema.tasks).set({ order: i }).where(eq(schema.tasks.id, taskIds[i]))
-    }
+    if (taskIds.length === 0) return
+    // One statement for the whole board — N sequential UPDATEs through the
+    // pooler made drag-and-drop persistence take seconds on larger boards.
+    const values = sql.join(
+      taskIds.map((id, i) => sql`(${id}::uuid, ${i}::integer)`),
+      sql`, `
+    )
+    await getDb().execute(sql`
+      UPDATE ${schema.tasks} AS t
+      SET "order" = v.ord
+      FROM (VALUES ${values}) AS v(id, ord)
+      WHERE t.id = v.id AND t.project_id = ${projectId}::uuid
+    `)
   },
 
   async getRuns(projectId) {
@@ -876,17 +893,42 @@ const dbStore: DataStore = {
   },
 
   async getAllRuns(userId) {
-    const db = getDb()
-    const rows = await db
-      .select()
+    // Polled every few seconds by the notification center — project only the
+    // columns it renders. The heavy jsonb columns (events, citations, plan)
+    // would otherwise dominate the payload.
+    const rows = await getDb()
+      .select({
+        id: schema.runs.id,
+        projectId: schema.runs.projectId,
+        status: schema.runs.status,
+        progress: schema.runs.progress,
+        duration: schema.runs.duration,
+        trace: schema.runs.trace,
+        confidence: schema.runs.confidence,
+        consensus: schema.runs.consensus,
+        createdAt: schema.runs.createdAt,
+        projectName: schema.projects.name,
+      })
       .from(schema.runs)
       .innerJoin(schema.projects, eq(schema.runs.projectId, schema.projects.id))
       .where(eq(schema.projects.userId, userId))
       .orderBy(desc(schema.runs.createdAt))
       .limit(50)
     return rows.map((r) => ({
-      ...mapRun(r.runs),
-      projectName: r.projects.name,
+      id: r.id,
+      projectId: r.projectId,
+      status: r.status,
+      progress: r.progress ?? null,
+      duration: r.duration ?? null,
+      trace: r.trace ?? [],
+      plan: null,
+      citations: [],
+      events: [],
+      confidence: r.confidence ?? null,
+      votes: {},
+      consensus: r.consensus ?? null,
+      createdAt: r.createdAt,
+      projectName: r.projectName,
     }))
   },
 
@@ -954,18 +996,19 @@ const dbStore: DataStore = {
 
   async getProjectProgress(projectId) {
     const db = getDb()
-    const [{ total }] = await db
-      .select({ total: sql<number>`count(*)` })
-      .from(schema.decisions)
-      .where(eq(schema.decisions.projectId, projectId))
-    const [{ resolved }] = await db
-      .select({ resolved: sql<number>`count(*)` })
-      .from(schema.decisions)
-      .where(and(eq(schema.decisions.projectId, projectId), eq(schema.decisions.status, "consensus")))
-    const [{ artifactCount }] = await db
-      .select({ artifactCount: sql<number>`count(*)` })
-      .from(schema.artifacts)
-      .where(eq(schema.artifacts.projectId, projectId))
+    const [[{ total, resolved }], [{ artifactCount }]] = await Promise.all([
+      db
+        .select({
+          total: sql<number>`count(*)`,
+          resolved: sql<number>`count(*) filter (where ${schema.decisions.status} = 'consensus')`,
+        })
+        .from(schema.decisions)
+        .where(eq(schema.decisions.projectId, projectId)),
+      db
+        .select({ artifactCount: sql<number>`count(*)` })
+        .from(schema.artifacts)
+        .where(eq(schema.artifacts.projectId, projectId)),
+    ])
     return progressFrom(Number(total), Number(resolved), Number(artifactCount))
   },
 

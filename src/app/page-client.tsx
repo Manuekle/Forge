@@ -5,10 +5,10 @@ import { motion, AnimatePresence } from "framer-motion"
 import Image from "next/image"
 import Link from "next/link"
 import {
-  ArrowRight01Icon, ChevronRightIcon, Tick01Icon, SparklesIcon, AlgorithmIcon,
-  Layers01Icon, GitBranchIcon, JusticeScale01Icon, File01Icon, Shield01Icon, AnalyticsUpIcon,
+  ArrowRight01Icon, ChevronRightIcon, Tick01Icon, SparklesIcon, Rocket02Icon,
+  Layers01Icon, GitBranchIcon, BubbleChatIcon, File01Icon, AiScanIcon, UsbMemory02Icon,
   Menu01Icon, Cancel01Icon, ArrowDown01Icon,
-  AiContentGenerator01Icon, AiIdeaIcon, AiCloud02Icon, AiScanIcon, AiFolder01Icon, AiSearch02Icon
+  AiContentGenerator01Icon, AiIdeaIcon, AiCloud02Icon, AiFolder01Icon, AiSearch02Icon
 } from "@hugeicons/core-free-icons"
 import { Icon } from "@/components/ui/icon"
 import { ThemeToggle } from "@/components/theme-toggle"
@@ -125,11 +125,11 @@ function Sponsors() {
         {SPONSORS.map((s) => (
           <span key={s.label} className="flex items-center gap-2.5 opacity-75 transition-opacity duration-200 hover:opacity-100">
             {"src" in s ? (
-              <Image src={s.src} alt="" width={20} height={20} className="h-5 w-5" />
+              <Image src={s.src} alt="" width={28} height={28} className="h-7 w-7" />
             ) : (
               <>
-                <img src={s.srcLight} alt="" className="h-5 w-5 dark:hidden" />
-                <img src={s.srcDark} alt="" className="hidden h-5 w-5 dark:block" />
+                <img src={s.srcLight} alt="" className="h-7 w-7 dark:hidden" />
+                <img src={s.srcDark} alt="" className="hidden h-7 w-7 dark:block" />
               </>
             )}
             <span className="text-sm font-semibold tracking-tight text-text-secondary">{s.label}</span>
@@ -309,9 +309,10 @@ function FaqItem({ q, a, open, onToggle }: { q: string; a: string; open: boolean
   )
 }
 
-export default function LandingPage() {
+/** Rotating hero headline, isolated so its 4s tick re-renders only the <h1>,
+ *  not the entire landing page tree. */
+function RotatingHeadline() {
   const [headlineIdx, setHeadlineIdx] = useState(0)
-  const [openFaq, setOpenFaq] = useState<number | null>(0)
 
   useEffect(() => {
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches
@@ -319,6 +320,27 @@ export default function LandingPage() {
     const t = setInterval(() => setHeadlineIdx((i) => (i + 1) % rotatingHeadlines.length), 4000)
     return () => clearInterval(t)
   }, [])
+
+  return (
+    <AnimatePresence mode="wait">
+      <motion.h1
+        key={headlineIdx}
+        initial={{ opacity: 0, y: 20, filter: "blur(4px)" }}
+        animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+        exit={{ opacity: 0, y: -20, filter: "blur(4px)" }}
+        transition={{ duration: 0.5 }}
+        className="max-w-[880px] text-balance text-center text-[clamp(2.5rem,7vw,5rem)] font-bold leading-[1.05]"
+        style={{ fontFamily: "var(--font-syne)" }}
+      >
+        {rotatingHeadlines[headlineIdx].prefix}
+        <span className="gradient-text">{rotatingHeadlines[headlineIdx].accent}</span>
+      </motion.h1>
+    </AnimatePresence>
+  )
+}
+
+export default function LandingPage() {
+  const [openFaq, setOpenFaq] = useState<number | null>(0)
 
   return (
     <div className="min-h-screen overflow-hidden bg-canvas text-text-primary antialiased">
@@ -350,20 +372,7 @@ export default function LandingPage() {
             </motion.div>
 
             <div className="relative mb-4 mt-10">
-              <AnimatePresence mode="wait">
-                <motion.h1
-                  key={headlineIdx}
-                  initial={{ opacity: 0, y: 20, filter: "blur(4px)" }}
-                  animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-                  exit={{ opacity: 0, y: -20, filter: "blur(4px)" }}
-                  transition={{ duration: 0.5 }}
-                  className="max-w-[880px] text-balance text-center text-[clamp(2.5rem,7vw,5rem)] font-bold leading-[1.05]"
-                  style={{ fontFamily: "var(--font-syne)" }}
-                >
-                  {rotatingHeadlines[headlineIdx].prefix}
-                  <span className="gradient-text">{rotatingHeadlines[headlineIdx].accent}</span>
-                </motion.h1>
-              </AnimatePresence>
+              <RotatingHeadline />
             </div>
 
             <motion.p variants={fadeUp} className="mt-4 max-w-[600px] text-pretty text-center text-base leading-relaxed text-text-secondary sm:text-lg">
@@ -409,12 +418,12 @@ export default function LandingPage() {
             </motion.h2>
             <div className="mt-14 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {[
-                { icon: JusticeScale01Icon, title: "Agent debate", desc: "Every agent challenges the others' assumptions before producing any deliverable.", pattern: "bg-hatch" },
+                { icon: BubbleChatIcon, title: "Agent debate", desc: "Every agent challenges the others' assumptions before producing any deliverable.", pattern: "bg-hatch" },
                 { icon: GitBranchIcon, title: "Consensus engine", desc: "Contentious decisions are voted on with full traceability and a confidence score.", pattern: "bg-rings" },
                 { icon: Layers01Icon, title: "Decision history", desc: "Every consensus is logged with its vote, rationale and metadata.", pattern: "bg-grid-soft" },
                 { icon: File01Icon, title: "Versioned artifacts", desc: "PRDs, backlogs and architectures with version control on every change.", pattern: "bg-grid-soft" },
-                { icon: Shield01Icon, title: "Risk scanner", desc: "QA reviews every plan against security, compliance and fraud risks.", pattern: "bg-hatch" },
-                { icon: AnalyticsUpIcon, title: "Project memory", desc: "Agents remember every prior decision and domain constraint.", pattern: "bg-rings" },
+                { icon: AiScanIcon, title: "Risk scanner", desc: "QA reviews every plan against security, compliance and fraud risks.", pattern: "bg-hatch" },
+                { icon: UsbMemory02Icon, title: "Project memory", desc: "Agents remember every prior decision and domain constraint.", pattern: "bg-rings" },
               ].map((f, i) => {
                 const iconObj = f.icon
                 return (
@@ -514,7 +523,7 @@ export default function LandingPage() {
             <motion.div variants={fadeUp}>
               <div className="mb-4 flex items-center gap-3">
                 <div className="flex h-8 w-8 items-center justify-center rounded-full gradient-brand shadow-brand">
-                  <Icon icon={AlgorithmIcon} size={16} className="text-white" />
+                  <Icon icon={Rocket02Icon} size={16} className="text-white" />
                 </div>
                 <span className="text-sm font-semibold text-brand" style={{ fontFamily: "var(--font-syne)" }}>Microsoft Foundry IQ</span>
               </div>
@@ -700,7 +709,7 @@ export default function LandingPage() {
         <div className="relative mx-auto flex max-w-[1200px] flex-col items-center px-6 py-28">
           <motion.div initial="initial" whileInView="animate" viewport={{ once: true }} variants={stagger} className="flex flex-col items-center">
             <motion.div variants={fadeUp} className="mb-8 flex h-16 w-16 items-center justify-center rounded-[20px] icon-chip text-white">
-              <Icon icon={AlgorithmIcon} size={28} />
+              <Icon icon={Rocket02Icon} size={28} />
             </motion.div>
             <motion.h2 variants={fadeUp} className="max-w-[700px] text-balance text-center text-4xl font-bold leading-[1.1] sm:text-6xl" style={{ fontFamily: "var(--font-syne)" }}>
               Your AI product team is ready.

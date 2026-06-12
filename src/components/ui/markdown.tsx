@@ -3,11 +3,12 @@
 import { useMemo } from "react"
 import { MermaidDiagram } from "@/components/ui/mermaid-diagram"
 
-let _key = 0
-function k(): number { return _key++ }
-
 function renderInline(text: string) {
   const out: React.ReactNode[] = []
+  // Keys local to this call — a module-global counter would mint new keys on
+  // every render and force React to remount every inline node.
+  let _key = 0
+  const k = () => _key++
 
   const step1 = text.split(/(\[S\d+\])/g)
   for (const s1 of step1) {

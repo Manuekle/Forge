@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import { Sidebar } from "@/components/layout/sidebar"
 import { Navbar } from "@/components/layout/navbar"
 
@@ -24,6 +25,8 @@ export function Shell({
   latestRun,
   onEditProject,
 }: ShellProps) {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+
   return (
     <div className="relative flex h-screen overflow-hidden bg-canvas text-text-primary">
       {/* Ambient brand aurora behind the chrome */}
@@ -34,6 +37,8 @@ export function Shell({
         projectDescription={projectDescription}
         projectStatus={projectStatus}
         onEditProject={onEditProject}
+        mobileOpen={mobileMenuOpen}
+        onMobileOpenChange={setMobileMenuOpen}
       />
       <div className="flex min-w-0 flex-1 flex-col p-2 md:pl-0">
         {/* Floating content panel — depth via surface + shadow, no borders */}
@@ -43,6 +48,7 @@ export function Shell({
             breadcrumb={breadcrumb}
             projectMode={projectMode}
             latestRun={latestRun || undefined}
+            onMenuToggle={() => setMobileMenuOpen((v) => !v)}
           />
           <div className="relative flex-1 overflow-auto">{children}</div>
         </div>

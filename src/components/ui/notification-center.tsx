@@ -28,22 +28,54 @@ export function NotificationCenter() {
     return () => document.removeEventListener("mousedown", handleClick)
   }, [])
 
+  const hasRunningRef = useRef(false)
+
   function load() {
     fetch("/api/notifications")
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (!data) return
-        setRuns(Array.isArray(data.runs) ? data.runs : [])
+        const freshRuns = Array.isArray(data.runs) ? data.runs : []
+        hasRunningRef.current = freshRuns.some((r: StoredRunWithProject) => r.status === "running")
+        setRuns(freshRuns)
         setActivities(Array.isArray(data.activities) ? data.activities : [])
       })
       .catch(() => {})
       .finally(() => setLoading(false))
   }
 
+  // Poll fast only while a run is active; back off when idle; stop entirely
+  // while the tab is hidden — this poller is mounted on every page, forever.
   useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | null = null
+    let stopped = false
+
+    function schedule() {
+      if (stopped) return
+      timer = setTimeout(tick, hasRunningRef.current ? 5000 : 30000)
+    }
+
+    function tick() {
+      if (document.visibilityState === "hidden") {
+        schedule()
+        return
+      }
+      load()
+      schedule()
+    }
+
+    function onVisible() {
+      if (document.visibilityState === "visible") load()
+    }
+
     load()
-    const interval = setInterval(load, 5000)
-    return () => clearInterval(interval)
+    schedule()
+    document.addEventListener("visibilitychange", onVisible)
+    return () => {
+      stopped = true
+      if (timer) clearTimeout(timer)
+      document.removeEventListener("visibilitychange", onVisible)
+    }
   }, [])
 
   const running = runs.filter((r) => r.status === "running")

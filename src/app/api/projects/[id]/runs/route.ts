@@ -1,7 +1,11 @@
-import { NextResponse } from "next/server"
+import { NextResponse, after } from "next/server"
 import { store, type StoredArtifact } from "@/lib/store"
 import { runAgentOrchestration } from "@/lib/orchestrator"
 import { requireProjectAccess } from "@/lib/api-auth"
+
+// A full orchestration is many sequential model calls (plan, agents,
+// checkpoints, consensus, artifacts) — minutes of wall time, not seconds.
+export const maxDuration = 800
 
 export async function GET(
   _request: Request,
@@ -11,7 +15,15 @@ export async function GET(
   const access = await requireProjectAccess(id)
   if (!access.ok) return access.response
   const all = await store.getRuns(id)
-  return NextResponse.json(all)
+  // This endpoint is polled every 1.5s while a run executes. Only two runs
+  // ever need their heavy payload: the latest (live status + trace) and the
+  // replay run the orchestration view renders (first completed with events).
+  // Strip events/trace/citations from the rest — history only shows metadata.
+  const replay = all.find((r) => r.status === "completed" && (r.events?.length ?? 0) > 0)
+  const slim = all.map((r, i) =>
+    i === 0 || r.id === replay?.id ? r : { ...r, events: [], trace: [], citations: [] }
+  )
+  return NextResponse.json(slim)
 }
 
 export async function POST(
@@ -82,79 +94,62 @@ export async function POST(
   }
   const projectMemory = lines.join("\n")
 
-  try {
-    const result = await runAgentOrchestration(
-      {
-        projectName: project.name,
-        projectDescription: project.description,
-        brief,
-        template: project.template,
-        projectMemory,
-      },
-      undefined,
-      (step) => store.updateRunProgress(run.id, step),
-      // Persist the orchestrator's plan before any agent executes — the plan
-      // and its reasoning survive even if the run later fails.
-      (plan) => store.setRunPlan(run.id, plan),
-      // Stream structured execution events (states, handoffs, votes,
-      // checkpoints) to the run row so the UI can render the live timeline.
-      (event) => store.appendRunEvent(run.id, event)
-    )
+  // Execute the orchestration after the response is sent — a run is minutes
+  // of sequential model calls and must not hold the client's request open.
+  // The UI polls the run row for progress, events and completion.
+  after(async () => {
+    try {
+      const result = await runAgentOrchestration(
+        {
+          projectName: project.name,
+          projectDescription: project.description,
+          brief,
+          template: project.template,
+          projectMemory,
+        },
+        undefined,
+        (step) => store.updateRunProgress(run.id, step),
+        // Persist the orchestrator's plan before any agent executes — the plan
+        // and its reasoning survive even if the run later fails.
+        (plan) => store.setRunPlan(run.id, plan),
+        // Stream structured execution events (states, handoffs, votes,
+        // checkpoints) to the run row so the UI can render the live timeline.
+        (event) => store.appendRunEvent(run.id, event)
+      )
 
-    // Create a decision from the orchestration
-    const decision = await store.createDecision(id, `Product analysis: ${project.name}`)
-    for (const entry of result.decisions) {
-      await store.addDecisionEntry(decision.id, entry.agent, entry.entry)
+      // Create a decision from the orchestration
+      const decision = await store.createDecision(id, `Product analysis: ${project.name}`)
+      for (const entry of result.decisions) {
+        await store.addDecisionEntry(decision.id, entry.agent, entry.entry)
+      }
+      await store.resolveDecision(decision.id, result.consensus, result.confidence, result.votes)
+
+      // Store artifacts
+      for (const artifact of result.artifacts) {
+        await store.createArtifact(id, artifact.type, artifact.title, artifact.content)
+      }
+
+      const duration = Math.floor((Date.now() - startedAt) / 1000)
+
+      // Persist the real trace + grounded citations, and fold the orchestrator's
+      // full decision log into the stored plan for traceability.
+      await store.setRunPlan(run.id, { ...result.plan, log: result.orchestratorLog })
+      await store.completeRun(run.id, duration, result.trace, result.citations, {
+        confidence: result.confidence,
+        votes: result.votes,
+        consensus: result.consensus,
+      })
+      const progress = await store.getProjectProgress(id)
+      await store.updateProject(id, {
+        progress,
+        status: progress >= 100 ? "in_review" : "active",
+        updatedAt: new Date(),
+      })
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : String(err)
+      await store.failRun(run.id, [{ time: "[00:00.01]", action: "run.failed", detail: errorMessage }])
     }
-    await store.resolveDecision(decision.id, result.consensus, result.confidence, result.votes)
+  })
 
-    // Store artifacts
-    for (const artifact of result.artifacts) {
-      await store.createArtifact(id, artifact.type, artifact.title, artifact.content)
-    }
-
-    const duration = Math.floor((Date.now() - startedAt) / 1000)
-
-    // Persist the real trace + grounded citations, and fold the orchestrator's
-    // full decision log into the stored plan for traceability.
-    await store.setRunPlan(run.id, { ...result.plan, log: result.orchestratorLog })
-    await store.completeRun(run.id, duration, result.trace, result.citations, {
-      confidence: result.confidence,
-      votes: result.votes,
-      consensus: result.consensus,
-    })
-    const progress = await store.getProjectProgress(id)
-    await store.updateProject(id, {
-      progress,
-      status: progress >= 100 ? "in_review" : "active",
-      updatedAt: new Date(),
-    })
-
-    return NextResponse.json({
-      id: run.id,
-      projectId: id,
-      status: "completed",
-      duration,
-      trace: result.trace,
-      citations: result.citations,
-      agents: result.decisions.map((d) => ({ role: d.agent, action: d.entry })),
-      decisions: result.decisions,
-      artifacts: result.artifacts,
-      confidence: result.confidence,
-      consensus: result.consensus,
-      plan: result.plan,
-      votes: result.votes,
-      revisions: result.revisions,
-      orchestratorLog: result.orchestratorLog,
-      createdAt: run.createdAt,
-    })
-  } catch (err) {
-    const errorMessage = err instanceof Error ? err.message : String(err)
-    const errorTrace = [{ time: "[00:00.01]", action: "run.failed", detail: errorMessage }]
-    await store.failRun(run.id, errorTrace)
-    return NextResponse.json(
-      { ...run, status: "failed", duration: 0, trace: errorTrace, error: errorMessage },
-      { status: 500 }
-    )
-  }
+  return NextResponse.json(run, { status: 202 })
 }

@@ -71,6 +71,13 @@
       "when": 1781243947636,
       "tag": "0009_sad_shocker",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1781300398393,
+      "tag": "0010_faulty_valkyrie",
+      "breakpoints": true
     }
   ]
 }

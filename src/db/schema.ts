@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, uuid, integer, real, jsonb } from "drizzle-orm/pg-core"
+import { pgTable, text, timestamp, uuid, integer, real, jsonb, index } from "drizzle-orm/pg-core"
 
 export const users = pgTable("users", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -47,20 +47,24 @@ export const verificationTokens = pgTable("verification_tokens", {
   expires: timestamp("expires", { mode: "date", withTimezone: true }).notNull(),
 })
 
-export const projects = pgTable("projects", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  userId: uuid("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  name: text("name").notNull(),
-  description: text("description"),
-  status: text("status").default("planning").notNull(),
-  progress: integer("progress").default(0).notNull(),
-  template: text("template"),
-  githubRepo: text("github_repo"),
-  createdAt: timestamp("created_at", { mode: "date", withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp("updated_at", { mode: "date", withTimezone: true }).defaultNow().notNull(),
-})
+export const projects = pgTable(
+  "projects",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    description: text("description"),
+    status: text("status").default("planning").notNull(),
+    progress: integer("progress").default(0).notNull(),
+    template: text("template"),
+    githubRepo: text("github_repo"),
+    createdAt: timestamp("created_at", { mode: "date", withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { mode: "date", withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [index("projects_user_updated_idx").on(t.userId, t.updatedAt.desc())]
+)
 
 export const decisions = pgTable("decisions", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -76,20 +80,26 @@ export const decisions = pgTable("decisions", {
     .$type<Record<string, { vote: string; confidence: number | null; concerns: string; round: number }>>()
     .default({}),
   createdAt: timestamp("created_at", { mode: "date", withTimezone: true }).defaultNow().notNull(),
-})
+},
+  (t) => [index("decisions_project_created_idx").on(t.projectId, t.createdAt.desc())]
+)
 
-export const artifacts = pgTable("artifacts", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  projectId: uuid("project_id")
-    .notNull()
-    .references(() => projects.id, { onDelete: "cascade" }),
-  type: text("type").notNull(),
-  title: text("title").notNull(),
-  version: integer("version").default(1).notNull(),
-  content: text("content").notNull(),
-  createdAt: timestamp("created_at", { mode: "date", withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp("updated_at", { mode: "date", withTimezone: true }).defaultNow().notNull(),
-})
+export const artifacts = pgTable(
+  "artifacts",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    type: text("type").notNull(),
+    title: text("title").notNull(),
+    version: integer("version").default(1).notNull(),
+    content: text("content").notNull(),
+    createdAt: timestamp("created_at", { mode: "date", withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { mode: "date", withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [index("artifacts_project_type_idx").on(t.projectId, t.type)]
+)
 
 export const runs = pgTable("runs", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -139,7 +149,9 @@ export const runs = pgTable("runs", {
     .default({}),
   consensus: text("consensus"),
   createdAt: timestamp("created_at", { mode: "date", withTimezone: true }).defaultNow().notNull(),
-})
+},
+  (t) => [index("runs_project_created_idx").on(t.projectId, t.createdAt.desc())]
+)
 
 export const tasks = pgTable("tasks", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -155,26 +167,36 @@ export const tasks = pgTable("tasks", {
   assignee: text("assignee"),
   createdAt: timestamp("created_at", { mode: "date", withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { mode: "date", withTimezone: true }).defaultNow().notNull(),
-})
+},
+  (t) => [index("tasks_project_order_idx").on(t.projectId, t.order)]
+)
 
-export const codeFiles = pgTable("code_files", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  projectId: uuid("project_id")
-    .notNull()
-    .references(() => projects.id, { onDelete: "cascade" }),
-  path: text("path").notNull(),
-  content: text("content").notNull(),
-  createdAt: timestamp("created_at", { mode: "date", withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp("updated_at", { mode: "date", withTimezone: true }).defaultNow().notNull(),
-})
+export const codeFiles = pgTable(
+  "code_files",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    path: text("path").notNull(),
+    content: text("content").notNull(),
+    createdAt: timestamp("created_at", { mode: "date", withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { mode: "date", withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [index("code_files_project_idx").on(t.projectId)]
+)
 
-export const activities = pgTable("activities", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  projectId: uuid("project_id")
-    .notNull()
-    .references(() => projects.id, { onDelete: "cascade" }),
-  agent: text("agent").notNull(),
-  action: text("action").notNull(),
-  project: text("project").notNull(),
-  createdAt: timestamp("created_at", { mode: "date", withTimezone: true }).defaultNow().notNull(),
-})
+export const activities = pgTable(
+  "activities",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    agent: text("agent").notNull(),
+    action: text("action").notNull(),
+    project: text("project").notNull(),
+    createdAt: timestamp("created_at", { mode: "date", withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [index("activities_project_created_idx").on(t.projectId, t.createdAt.desc())]
+)

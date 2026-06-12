@@ -177,8 +177,8 @@ function AgentRow({
         </span>
       )}
 
-      {/* State rail */}
-      <div className="ml-auto flex items-center gap-[3px]">
+      {/* State rail — hidden on mobile where rows are too narrow */}
+      <div className="ml-auto hidden items-center gap-[3px] sm:flex">
         {STATE_ORDER.map((s, si) => {
           const filled = si <= stateIdx
           return (
@@ -210,7 +210,7 @@ function AgentRow({
       {/* State label */}
       <span
         className={cn(
-          "flex-shrink-0 text-[11px] tabular-nums",
+          "ml-auto flex-shrink-0 text-[11px] tabular-nums sm:ml-0",
           working ? "font-medium" : "text-muted",
           done && "text-success"
         )}

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { use, useEffect, useMemo, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import dynamic from "next/dynamic"
 import { motion, AnimatePresence } from "framer-motion"
@@ -73,14 +73,8 @@ type DecisionData = {
 }
 
 export default function ProjectPage({ params: paramsPromise }: { params: Promise<{ id: string }> }) {
-  const [params, setParams] = useState<{ id: string } | null>(null)
-
-  useEffect(() => {
-    paramsPromise.then(setParams)
-  }, [paramsPromise])
-
-  if (!params) return null
-  return <ProjectPageInner projectId={params.id} />
+  const { id } = use(paramsPromise)
+  return <ProjectPageInner projectId={id} />
 }
 
 function ProjectPageInner({ projectId }: { projectId: string }) {
@@ -159,7 +153,24 @@ function ProjectPageInner({ projectId }: { projectId: string }) {
         const runsRes = await fetch(`/api/projects/${projectId}/runs`)
         if (!runsRes.ok) return
         const all: StoredRun[] = await runsRes.json()
-        setRuns(Array.isArray(all) ? all : [])
+        // Only re-render when the latest run actually changed — every setRuns
+        // re-renders the whole workspace tree.
+        setRuns((prev) => {
+          const a = Array.isArray(all) ? all : []
+          const p0 = prev[0]
+          const n0 = a[0]
+          if (
+            p0 && n0 &&
+            prev.length === a.length &&
+            p0.id === n0.id &&
+            p0.status === n0.status &&
+            p0.progress === n0.progress &&
+            (p0.events?.length ?? 0) === (n0.events?.length ?? 0)
+          ) {
+            return prev
+          }
+          return a
+        })
         const latest = all[0]
         if (!latest) return
         // The new run hasn't been created yet — keep waiting.
@@ -219,34 +230,36 @@ function ProjectPageInner({ projectId }: { projectId: string }) {
     startPolling()
   }
 
-  async function handleApprove() {
-    const res = await fetch(`/api/projects/${projectId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: "approved" }),
-    })
-    if (res.ok) {
-      const updated = await res.json()
-      setProject(updated)
-      toast({ title: "Project approved", description: "All deliverables have been reviewed and approved.", variant: "success" })
-    } else {
-      toast({ title: "Failed to approve", variant: "error" })
+  const [changingStatus, setChangingStatus] = useState(false)
+
+  async function patchStatus(status: "approved" | "active", success: { title: string; description: string; variant: "success" | "brand" }, failTitle: string) {
+    if (changingStatus) return
+    setChangingStatus(true)
+    try {
+      const res = await fetch(`/api/projects/${projectId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      })
+      if (res.ok) {
+        const updated = await res.json()
+        setProject(updated)
+        toast(success)
+      } else {
+        toast({ title: failTitle, variant: "error" })
+      }
+    } catch {
+      toast({ title: failTitle, description: "Network error.", variant: "error" })
     }
+    setChangingStatus(false)
   }
 
-  async function handleReopen() {
-    const res = await fetch(`/api/projects/${projectId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: "active" }),
-    })
-    if (res.ok) {
-      const updated = await res.json()
-      setProject(updated)
-      toast({ title: "Project re-opened", description: "The project is back in active development.", variant: "brand" })
-    } else {
-      toast({ title: "Failed to re-open", variant: "error" })
-    }
+  function handleApprove() {
+    patchStatus("approved", { title: "Project approved", description: "All deliverables have been reviewed and approved.", variant: "success" }, "Failed to approve")
+  }
+
+  function handleReopen() {
+    patchStatus("active", { title: "Project re-opened", description: "The project is back in active development.", variant: "brand" }, "Failed to re-open")
   }
 
   async function handleAddDecision() {
@@ -356,7 +369,7 @@ function ProjectPageInner({ projectId }: { projectId: string }) {
     setSaving(false)
   }
 
-  const mappedDecisions: DecisionData[] = decisions.map((d) => ({
+  const mappedDecisions: DecisionData[] = useMemo(() => decisions.map((d) => ({
     id: d.id,
     topic: d.topic,
     status: d.status,
@@ -368,7 +381,7 @@ function ProjectPageInner({ projectId }: { projectId: string }) {
     })),
     consensus: d.consensus || undefined,
     createdAt: new Date(d.createdAt).toLocaleDateString(),
-  }))
+  })), [decisions])
 
   const allVersions = artifacts.filter((a) => a.type.toLowerCase() === activeDeliverable.toLowerCase())
   const currentArtifact = allVersions.find((a) => a.version === selectedVersion) ?? allVersions[0] ?? null
@@ -378,7 +391,9 @@ function ProjectPageInner({ projectId }: { projectId: string }) {
   const viewRun = latestRun?.status === "running"
     ? latestRun
     : runs.find((r) => r.status === "completed" && (r.events?.length ?? 0) > 0) ?? latestRun
-  const view = deriveLiveView(viewRun)
+  // O(events) fold — recompute only when the run object identity changes
+  // (the poll already preserves identity when nothing changed).
+  const view = useMemo(() => deriveLiveView(viewRun), [viewRun])
 
   function handleStartEditArtifact() {
     if (!currentArtifact) return
@@ -453,7 +468,7 @@ function ProjectPageInner({ projectId }: { projectId: string }) {
       <div className="pointer-events-none fixed inset-0 bg-noise" />
       <div className="flex min-h-0 flex-1">
         {/* Main Content */}
-        <div className="flex-1 p-4 sm:p-6 lg:p-8">
+        <div className="min-w-0 flex-1 p-4 sm:p-6 lg:p-8">
           <div className="max-w-[820px]">
             {/* Progress + Status Bar + Run control */}
             <div className="mb-7 flex flex-wrap items-center gap-3">
@@ -527,9 +542,9 @@ function ProjectPageInner({ projectId }: { projectId: string }) {
                         View repo
                       </Button>
                     )}
-                    <Button size="sm" onClick={handleApprove}>
+                    <Button size="sm" onClick={handleApprove} disabled={changingStatus}>
                       <Icon icon={SignalIcon} size={13} />
-                      Mark approved
+                      {changingStatus ? "Approving…" : "Mark approved"}
                     </Button>
                   </div>
                 </div>
@@ -562,16 +577,17 @@ function ProjectPageInner({ projectId }: { projectId: string }) {
                         View repo
                       </Button>
                     )}
-                    <Button size="sm" variant="ghost" onClick={handleReopen}>
-                      Re-open
+                    <Button size="sm" variant="ghost" onClick={handleReopen} disabled={changingStatus}>
+                      {changingStatus ? "Re-opening…" : "Re-open"}
                     </Button>
                   </div>
                 </div>
               </motion.div>
             )}
 
-            {/* Tabs — pill segmented control */}
-            <div className="mb-7 inline-flex gap-1 rounded-full bg-surface-inset p-1 ring-hair">
+            {/* Tabs — pill segmented control (scrolls horizontally on mobile) */}
+            <div className="no-scrollbar -mx-4 mb-7 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+              <div className="inline-flex gap-1 whitespace-nowrap rounded-full bg-surface-inset p-1 ring-hair">
               {tabs.map((t) => {
                 const TabIcon = t.icon
                 const active = activeTab === t.id
@@ -597,6 +613,7 @@ function ProjectPageInner({ projectId }: { projectId: string }) {
                   </button>
                 )
               })}
+              </div>
             </div>
 
             {/* Tab: Orchestration — the live multi-agent execution view */}
@@ -665,7 +682,7 @@ function ProjectPageInner({ projectId }: { projectId: string }) {
             {/* Tab: Deliverables */}
             {activeTab === "deliverables" && (
               <motion.div key="deliverables" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.18 }}>
-                <div className="mb-6 flex gap-1.5 overflow-auto pb-1">
+                <div className="no-scrollbar mb-6 flex gap-1.5 overflow-x-auto pb-1">
                   {deliverableTypes.map((t) => {
                     const active = activeDeliverable === t
                     return (

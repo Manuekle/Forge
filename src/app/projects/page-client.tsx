@@ -96,7 +96,7 @@ export default function ProjectsPage() {
           <div className="mt-6 flex flex-wrap items-center gap-3">
             <div className="max-w-[320px] flex-1">
               <Input
-                placeholder="Search projects\u2026"
+                placeholder="Search projects…"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 icon={<Icon icon={AiSearch02Icon} size={15} />}

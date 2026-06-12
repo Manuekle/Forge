@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useTheme } from "next-themes"
 import { Modal } from "@/components/ui/modal"
-import { ArrowExpand01Icon } from "@hugeicons/core-free-icons"
+import { ArrowExpand01Icon, RefreshIcon } from "@hugeicons/core-free-icons"
 import { Icon } from "@/components/ui/icon"
 
 let renderSeq = 0
@@ -162,6 +162,7 @@ export function MermaidDiagram({ definition }: { definition: string }) {
   const [svg, setSvg] = useState<string | null>(null)
   const [error, setError] = useState(false)
   const [expanded, setExpanded] = useState(false)
+  const [retryCounter, setRetryCounter] = useState(0)
   const { resolvedTheme } = useTheme()
   const isDark = resolvedTheme !== "light"
 
@@ -211,12 +212,22 @@ export function MermaidDiagram({ definition }: { definition: string }) {
     }
     render()
     return () => { cancelled = true }
-  }, [definition, isDark])
+  }, [definition, isDark, retryCounter])
 
   if (error) {
     return (
-      <div className="my-3 overflow-auto rounded-2xl bg-surface-inset p-4 font-mono text-[11px] leading-relaxed text-text-secondary ring-hair">
-        <div className="mb-2 text-[10px] font-medium text-muted">Mermaid — render failed</div>
+      <div className="group/diagram my-3 overflow-auto rounded-2xl bg-surface-inset p-4 font-mono text-[11px] leading-relaxed text-text-secondary ring-hair">
+        <div className="mb-2 flex items-center gap-2">
+          <span className="text-[10px] font-medium text-muted">Mermaid — render failed</span>
+          <button
+            onClick={() => setRetryCounter((c) => c + 1)}
+            className="ml-auto flex h-6 w-6 items-center justify-center rounded-full text-muted opacity-0 transition-all duration-200 hover:bg-hover-strong hover:text-text-primary group-hover/diagram:opacity-100"
+            title="Retry render"
+            aria-label="Retry render"
+          >
+            <Icon icon={RefreshIcon} size={13} />
+          </button>
+        </div>
         <pre className="m-0 whitespace-pre-wrap">{definition}</pre>
       </div>
     )

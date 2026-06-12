@@ -4,6 +4,9 @@ import { complete } from "@/lib/foundry-iq"
 import { requireProjectAccess } from "@/lib/api-auth"
 import { sanitizeForPrompt, safeJson } from "@/lib/guard"
 
+// Three sequential agent completions per debate — allow well over a minute.
+export const maxDuration = 120
+
 const DEBATE_AGENTS = [
   {
     key: "pm",
