@@ -5,6 +5,7 @@ export const metadata: Metadata = {
   title: "Settings",
   description:
     "Manage your profile, workspace, API configuration and account settings.",
+  robots: { index: false, follow: false },
   openGraph: {
     title: "Settings",
     description: "Manage your profile, workspace, API configuration and account settings.",

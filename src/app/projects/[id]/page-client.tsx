@@ -25,6 +25,7 @@ import { CitationsPanel } from "@/components/orchestration/citations-panel"
 import { RunHistory } from "@/components/orchestration/run-history"
 import { deriveLiveView, STATE_LABELS } from "@/components/orchestration/derive"
 import { AGENTS } from "@/lib/constants"
+import { invalidateProjects } from "@/lib/use-projects"
 import { cn, formatDuration } from "@/lib/utils"
 import {
   SparklesIcon,
@@ -103,19 +104,22 @@ function ProjectPageInner({ projectId }: { projectId: string }) {
   const baselineRunRef = useRef<string | null>(null)
 
   function load(onLoaded?: (artifacts: StoredArtifact[]) => void) {
-    Promise.all([
-      fetch(`/api/projects/${projectId}`).then((r) => (r.ok ? r.json() : null)),
-      fetch(`/api/projects/${projectId}/decisions`).then((r) => (r.ok ? r.json() : [])),
-      fetch(`/api/projects/${projectId}/artifacts`).then((r) => (r.ok ? r.json() : [])),
-      fetch(`/api/projects/${projectId}/runs`).then((r) => (r.ok ? r.json() : [])),
-    ])
-      .then(([p, d, a, r]) => {
-        // Endpoints can return a non-array error object on 401/404 — coerce.
-        setProject(p && !p.error ? p : null)
-        setDecisions(Array.isArray(d) ? d : [])
-        const fresh = Array.isArray(a) ? a : []
+    // Single workspace request: one auth check, one round trip.
+    fetch(`/api/projects/${projectId}/workspace`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!data || data.error) {
+          setProject(null)
+          setDecisions([])
+          setArtifacts([])
+          setRuns([])
+          return
+        }
+        setProject(data.project ?? null)
+        setDecisions(Array.isArray(data.decisions) ? data.decisions : [])
+        const fresh: StoredArtifact[] = Array.isArray(data.artifacts) ? data.artifacts : []
         setArtifacts(fresh)
-        const freshRuns: StoredRun[] = Array.isArray(r) ? r : []
+        const freshRuns: StoredRun[] = Array.isArray(data.runs) ? data.runs : []
         setRuns(freshRuns)
         if (freshRuns[0]?.status === "running") startPolling()
         onLoaded?.(fresh)
@@ -333,6 +337,7 @@ function ProjectPageInner({ projectId }: { projectId: string }) {
     setDeleting(true)
     const res = await fetch(`/api/projects/${projectId}`, { method: "DELETE" })
     if (res.ok) {
+      invalidateProjects()
       toast({ title: "Project deleted", variant: "info" })
       router.push("/projects")
     } else {

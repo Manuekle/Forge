@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge"
 import { Modal } from "@/components/ui/modal"
 import { Button } from "@/components/ui/button"
 import { AGENTS } from "@/lib/constants"
-import type { StoredProject } from "@/lib/store"
+import { useProjects } from "@/lib/use-projects"
 import type { AgentType } from "@/types"
 
 const navItems = [
@@ -157,18 +157,10 @@ function UserCard() {
 export function Sidebar({ projectMode, projectName, projectDescription, projectStatus, onEditProject, mobileOpen, onMobileOpenChange }: SidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
-  const [recentProjects, setRecentProjects] = useState<StoredProject[]>([])
+  // Shared cached list — deduped with the dashboard/projects page request.
+  const { projects: recentProjects } = useProjects(!projectMode)
   const _mobileOpen = mobileOpen ?? false
   const _setMobileOpen = onMobileOpenChange ?? (() => {})
-
-  useEffect(() => {
-    if (!projectMode) {
-      fetch("/api/projects")
-        .then((r) => { if (!r.ok) throw new Error(); return r.json() })
-        .then((data) => { if (Array.isArray(data)) setRecentProjects(data) })
-        .catch(() => setRecentProjects([]))
-    }
-  }, [projectMode])
 
   if (projectMode) {
     return (

@@ -70,9 +70,23 @@ const appJsonLd = {
   },
 }
 
+const orgJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: "Forge",
+  url: "https://forge.dev",
+  logo: "https://forge.dev/logo.png",
+  description:
+    "AI-powered product simulation platform — six specialized AI agents debate, vote and deliver complete product plans.",
+}
+
 export default function Page() {
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }}
+      />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(appJsonLd) }}

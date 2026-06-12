@@ -1,4 +1,4 @@
-import type { Metadata } from "next"
+import type { Metadata, Viewport } from "next"
 import { Syne, Inter_Tight, JetBrains_Mono } from "next/font/google"
 import { Providers } from "@/components/providers"
 import "./globals.css"
@@ -22,6 +22,13 @@ const jetbrainsMono = JetBrains_Mono({
   weight: ["400", "500"],
   variable: "--font-jetbrains-mono",
 })
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: dark)", color: "#09090B" },
+    { media: "(prefers-color-scheme: light)", color: "#F5F5F0" },
+  ],
+}
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://forge.dev"),

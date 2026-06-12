@@ -13,7 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { CreateProjectModal } from "@/components/shared/create-project-modal"
 import { AGENTS } from "@/lib/constants"
 import { stripMarkdown } from "@/components/ui/markdown"
-import type { StoredProject } from "@/lib/store"
+import { useProjects } from "@/lib/use-projects"
 import {
   ArrowRight01Icon, Layers01Icon, AnalyticsUpIcon, SparklesIcon, AlgorithmIcon, Clock01Icon,
   Folder01Icon, BrainIcon, File01Icon, BarChartIcon,
@@ -52,20 +52,18 @@ function getRelativeTime(iso: string | Date): string {
 }
 
 export default function DashboardPage() {
-  const [projects, setProjects] = useState<StoredProject[]>([])
+  const { projects, loading: projectsLoading } = useProjects()
   const [activities, setActivities] = useState<Activity[]>([])
-  const [loading, setLoading] = useState(true)
+  const [activityLoading, setActivityLoading] = useState(true)
   const [showCreate, setShowCreate] = useState(false)
+  const loading = projectsLoading || activityLoading
 
   useEffect(() => {
-    Promise.all([
-      fetch("/api/projects").then((r) => r.json()),
-      fetch("/api/activity").then((r) => r.json()),
-    ]).then(([p, a]) => {
-      setProjects(Array.isArray(p) ? p : [])
-      setActivities(Array.isArray(a) ? a : [])
-      setLoading(false)
-    }).catch(() => setLoading(false))
+    fetch("/api/activity")
+      .then((r) => r.json())
+      .then((a) => setActivities(Array.isArray(a) ? a : []))
+      .catch(() => {})
+      .finally(() => setActivityLoading(false))
   }, [])
 
   const metrics = {

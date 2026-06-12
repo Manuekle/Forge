@@ -8,6 +8,7 @@ import { Icon } from "@/components/ui/icon"
 import { Modal } from "@/components/ui/modal"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+import { invalidateProjects } from "@/lib/use-projects"
 
 interface CreateProjectModalProps {
   open: boolean
@@ -41,6 +42,7 @@ export function CreateProjectModal({ open, onOpenChange, onCreated }: CreateProj
       setName("")
       setDesc("")
       onOpenChange(false)
+      invalidateProjects()
       onCreated?.()
       router.push(`/projects/${project.id}`)
     }

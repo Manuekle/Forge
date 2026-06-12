@@ -5,6 +5,7 @@ export const metadata: Metadata = {
   title: "Projects",
   description:
     "Browse and manage your AI-powered projects.",
+  robots: { index: false, follow: false },
   openGraph: {
     title: "Projects",
     description: "Browse and manage all your AI-powered product simulation projects.",

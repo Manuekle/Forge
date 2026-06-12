@@ -249,7 +249,13 @@ Done in this pass:
 - **Markdown keys** — `renderInline` keys are per-call, not module-global (no full inline remount per render).
 - **Assets** — `logo.png` 1.27 MB → 8.4 KB (256px palette), `og-image.png` 412 KB → 58 KB, `og-hero.png` 636 KB → 81 KB.
 
-Still open: H1 (SSR data), H2 (workspace endpoint), H3 (client dedupe/SWR), H5 (debate streaming), M3, M6–M8, monitoring.
+Second pass (same day):
+- **C4 applied** — 7 indexes live in Postgres (applied directly with `CREATE INDEX IF NOT EXISTS`; `db:migrate` unusable — migrations table empty because schema history used `db:push`; `db:push` itself crashes on a drizzle-kit 0.31 CHECK-constraint introspection bug → upgrade drizzle-kit before next schema change). Verified via `pg_indexes` + `EXPLAIN` (runs query uses `runs_project_created_idx`).
+- **H2** — `GET /api/projects/[id]/workspace` returns `{project, decisions, artifacts, runs}` in one auth check / one round trip; project page `load()` uses it (was 4 requests × 4 auth checks).
+- **H3** — `src/lib/use-projects.ts`: module-level cached `useProjects()` hook with 15 s TTL + in-flight dedupe + cross-consumer listeners; used by sidebar, dashboard, projects page; `invalidateProjects()` on create/delete.
+- **SEO** — `robots: { index: false }` meta on all auth-gated pages (dashboard, projects, projects/[id], agents, settings) and signin (robots.txt disallow alone doesn't prevent indexing of linked URLs); Organization JSON-LD added to landing (alongside existing SoftwareApplication + FAQPage); `viewport.themeColor` for dark/light; sitemap/robots/canonicals verified correct.
+
+Still open: H1 (SSR data), H5 (debate streaming), M3 (ISO activity timestamps), M6–M8, monitoring.
 
 # Implementation Roadmap (by ROI)
 

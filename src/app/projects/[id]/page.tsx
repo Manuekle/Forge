@@ -5,6 +5,8 @@ export const metadata: Metadata = {
   title: "Project",
   description:
     "Project dashboard with AI-driven orchestration, deliverables, and decisions.",
+  // Auth-gated — robots.txt disallow alone still lets linked URLs get indexed.
+  robots: { index: false, follow: false },
   openGraph: {
     title: "Project",
     description: "AI-powered product simulation — live agent debate, artifacts, and orchestration.",

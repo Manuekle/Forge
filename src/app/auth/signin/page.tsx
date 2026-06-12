@@ -5,6 +5,7 @@ export const metadata: Metadata = {
   title: "Sign In",
   description:
     "Sign in to your Forge account to continue building.",
+  robots: { index: false },
   openGraph: {
     title: "Sign In",
     description: "Sign in to Forge — the AI-powered product simulation platform.",

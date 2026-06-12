@@ -14,6 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { CreateProjectModal } from "@/components/shared/create-project-modal"
 import { AGENTS } from "@/lib/constants"
 import { cn } from "@/lib/utils"
+import { useProjects } from "@/lib/use-projects"
 import type { StoredProject } from "@/lib/store"
 import {
   AiSearch02Icon,
@@ -36,29 +37,23 @@ const filters = [
 ] as const
 
 export default function ProjectsPage() {
-  const [projects, setProjects] = useState<StoredProject[]>([])
-  const [loading, setLoading] = useState(true)
+  const { projects: rawProjects, loading, reload: reloadProjects } = useProjects()
   const [activeFilter, setActiveFilter] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
   const [showCreate, setShowCreate] = useState(false)
   const [view, setView] = useState<"grid" | "table">("grid")
+  const [projects, setProjects] = useState<(StoredProject & { _ago?: number })[]>([])
 
-  function reloadProjects() {
-    fetch("/api/projects")
-      .then((r) => r.json())
-      .then((data) => {
-        setProjects(
-          (Array.isArray(data) ? data : []).map((proj: StoredProject) => ({
-            ...proj,
-            _ago: Math.floor((Date.now() - new Date(proj.updatedAt).getTime()) / 60000),
-          }))
-        )
-        setLoading(false)
-      })
-      .catch(() => setLoading(false))
-  }
-
-  useEffect(() => { reloadProjects() }, [])
+  // Relative-time decoration is impure (Date.now) — derive it in an effect.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setProjects(
+      rawProjects.map((proj) => ({
+        ...proj,
+        _ago: Math.floor((Date.now() - new Date(proj.updatedAt).getTime()) / 60000),
+      }))
+    )
+  }, [rawProjects])
 
   const filtered = projects.filter((p) => {
     const matchFilter = activeFilter === "" || p.status === activeFilter
