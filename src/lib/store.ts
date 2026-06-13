@@ -1061,7 +1061,7 @@ const dbStore: DataStore = {
 // Shared demo seed (backend-agnostic — uses the public DataStore interface)
 // ===========================================================================
 
-async function seedDemo(s: DataStore, userId: string) {
+export async function seedDemo(s: DataStore, userId: string) {
   // Project 1: Aura Energy (The Demo Project - Active/Review)
   const p1 = await s.createProject({
     userId,
@@ -1197,6 +1197,18 @@ async function seedDemo(s: DataStore, userId: string) {
       }
     }
   )
+
+  // Seed initial code files for Aura Energy
+  await s.replaceCodeFiles(p1.id, [
+    {
+      path: "README.md",
+      content: "# Aura Energy Core\n\nDecentralized energy marketplace orchestrated by Forge.\n\n## Architecture\n- Layer: Azure Managed Confidential Ledger\n- Privacy: ZK-Rollups (GDPR 2026 Compliant)\n- Agents: Lead by Forge Orchestrator",
+    },
+    {
+      path: "src/infrastructure/ledger.ts",
+      content: "import { ConfidentialLedger } from '@azure/confidential-ledger';\n\nexport class EnergyLedger {\n  private client: ConfidentialLedger;\n\n  constructor(endpoint: string) {\n    this.client = new ConfidentialLedger(endpoint);\n  }\n\n  async recordTrade(prosumer: string, amount: number) {\n    // ZK-Proof verification logic handled by Forge-AI middleware\n    return await this.client.post('/trades', { prosumer, amount });\n  }\n}",
+    }
+  ])
 
   // Sync Progress & Ensure Aura Energy is first by updating its timestamp last
   await s.updateProject(p2.id, { progress: await s.getProjectProgress(p2.id) })
