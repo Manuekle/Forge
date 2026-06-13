@@ -1198,11 +1198,11 @@ async function seedDemo(s: DataStore, userId: string) {
     }
   )
 
-  // Sync Progress
-  await s.updateProject(p1.id, { progress: await s.getProjectProgress(p1.id) })
+  // Sync Progress & Ensure Aura Energy is first by updating its timestamp last
   await s.updateProject(p2.id, { progress: await s.getProjectProgress(p2.id) })
   await s.updateProject(p3.id, { progress: await s.getProjectProgress(p3.id) })
   await s.updateProject(p4.id, { progress: await s.getProjectProgress(p4.id) })
+  await s.updateProject(p1.id, { progress: await s.getProjectProgress(p1.id), updatedAt: new Date() })
 }
 
 export const store: DataStore = dbEnabled ? dbStore : memStore
