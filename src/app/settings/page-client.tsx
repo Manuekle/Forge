@@ -50,19 +50,28 @@ export default function SettingsPage() {
   const [deleting, setDeleting] = useState(false)
   const [showScopeGuide, setShowScopeGuide] = useState(false)
 
+  const isDemo = profile.email === "demo@forge.dev"
+
   useEffect(() => {
     fetch("/api/user/settings")
       .then((r) => r.ok ? r.json() : null)
       .then((data) => {
         if (!data) return
-        if (data.githubToken) setGithubToken(data.githubToken)
+        
+        // Load githubToken from API, or from localStorage if demo
+        if (isDemo) {
+          setGithubToken(localStorage.getItem("forge-github-token") || "")
+        } else if (data.githubToken) {
+          setGithubToken(data.githubToken)
+        }
+        
         if (data.jiraDomain || data.jiraEmail || data.jiraToken) {
           setJira({ domain: data.jiraDomain ?? "", email: data.jiraEmail ?? "", token: data.jiraToken ?? "" })
         }
         if (data.linearToken) setLinearToken(data.linearToken)
       })
       .catch(() => {})
-  }, [])
+  }, [isDemo])
 
   function saveProfile() {
     localStorage.setItem(LS_PROFILE, JSON.stringify(profile))
@@ -81,6 +90,12 @@ export default function SettingsPage() {
 
   async function saveGithub() {
     setSavingGithub(true)
+    if (isDemo) {
+      localStorage.setItem("forge-github-token", githubToken)
+      toast({ title: "GitHub token saved locally", variant: "success" })
+      setSavingGithub(false)
+      return
+    }
     const res = await fetch("/api/user/settings", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },

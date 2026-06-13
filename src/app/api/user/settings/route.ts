@@ -2,10 +2,18 @@ import { NextResponse } from "next/server"
 import { store } from "@/lib/store"
 import { requireUser } from "@/lib/api-auth"
 import { safeJson } from "@/lib/guard"
+import { getDb, schema } from "@/db"
+import { eq } from "drizzle-orm"
+
+async function isDemoUser(userId: string) {
+  const [user] = await getDb().select().from(schema.users).where(eq(schema.users.id, userId)).limit(1)
+  return user?.email === "demo@forge.dev"
+}
 
 async function settingsPayload(userId: string) {
+  const isDemo = await isDemoUser(userId)
   const [githubToken, jiraConfig, linearToken] = await Promise.all([
-    store.getUserGithubToken(userId),
+    isDemo ? null : store.getUserGithubToken(userId),
     store.getUserJiraConfig(userId),
     store.getUserLinearToken(userId),
   ])
@@ -30,8 +38,12 @@ export async function PATCH(request: Request) {
   if (!access.ok) return access.response
 
   const body = await safeJson(request)
+  const isDemo = await isDemoUser(access.userId)
+  
   if (typeof body.githubToken === "string" || body.githubToken === null) {
-    await store.setUserGithubToken(access.userId, body.githubToken || null)
+    if (!isDemo) {
+      await store.setUserGithubToken(access.userId, body.githubToken || null)
+    }
   }
   if ("jiraDomain" in body || "jiraEmail" in body || "jiraToken" in body) {
     const domain = typeof body.jiraDomain === "string" ? body.jiraDomain.trim() : ""

@@ -1,6 +1,7 @@
 "use client"
 
 import { use, useEffect, useMemo, useRef, useState } from "react"
+import { useTheme } from "next-themes"
 import { useRouter } from "next/navigation"
 import dynamic from "next/dynamic"
 import { motion, AnimatePresence } from "framer-motion"
@@ -79,6 +80,8 @@ export default function ProjectPage({ params: paramsPromise }: { params: Promise
 }
 
 function ProjectPageInner({ projectId }: { projectId: string }) {
+  const { resolvedTheme } = useTheme()
+  const isDark = resolvedTheme !== "light"
   const router = useRouter()
   const { toast } = useToast()
   const [project, setProject] = useState<StoredProject | null>(null)
@@ -750,9 +753,9 @@ function ProjectPageInner({ projectId }: { projectId: string }) {
                         <div className="flex flex-col gap-3">
                           <div className="overflow-hidden rounded-2xl ring-hair">
                             <MonacoEditor
-                              height="400px"
+                              height="600px"
                               language="markdown"
-                              theme="forge-dark"
+                              theme={isDark ? "forge-dark" : "forge-light"}
                               value={draftContent}
                               onChange={(value) => setDraftContent(value ?? "")}
                               beforeMount={(monaco) => {
@@ -765,6 +768,17 @@ function ProjectPageInner({ projectId }: { projectId: string }) {
                                     "editor.lineHighlightBackground": "#141417",
                                     "editorLineNumber.foreground": "#4A4A4F",
                                     "editorGutter.background": "#0C0C0E",
+                                  },
+                                })
+                                monaco.editor.defineTheme("forge-light", {
+                                  base: "vs",
+                                  inherit: true,
+                                  rules: [],
+                                  colors: {
+                                    "editor.background": "#FFFFFF",
+                                    "editor.lineHighlightBackground": "#F5F5F5",
+                                    "editorLineNumber.foreground": "#A0A0A0",
+                                    "editorGutter.background": "#FFFFFF",
                                   },
                                 })
                               }}

@@ -76,15 +76,41 @@ export function CodeWorkspace({ projectId }: { projectId: string }) {
   const tree = useMemo(() => buildTree(files), [files])
 
   useEffect(() => {
+    let mounted = true;
+    
+    // Add a safety timeout to prevent infinite loading
+    const timer = setTimeout(() => {
+      if (mounted && loading) {
+        setLoading(false);
+        setFiles([]);
+        toast({ title: "Workspace error", description: "Loading timed out.", variant: "error" });
+      }
+    }, 10000);
+
     fetch(`/api/projects/${projectId}/code`)
-      .then((r) => (r.ok ? r.json() : []))
-      .then((data: StoredCodeFile[]) => {
-        const list = Array.isArray(data) ? data : []
-        setFiles(list)
-        if (list.length > 0) selectFile(list.find((f) => f.path === "README.md") ?? list[0])
+      .then((r) => {
+        if (!mounted) return;
+        if (r.ok) return r.json();
+        throw new Error("Failed to fetch");
       })
-      .catch(() => setFiles([]))
-      .finally(() => setLoading(false))
+      .then((data: StoredCodeFile[]) => {
+        if (!mounted) return;
+        const list = Array.isArray(data) ? data : [];
+        setFiles(list);
+        if (list.length > 0) selectFile(list.find((f) => f.path === "README.md") ?? list[0]);
+      })
+      .catch((err) => {
+        if (!mounted) return;
+        console.error("Workspace load error:", err);
+        setFiles([]);
+      })
+      .finally(() => {
+        if (!mounted) return;
+        clearTimeout(timer);
+        setLoading(false);
+      });
+    
+    return () => { mounted = false; clearTimeout(timer); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId])
 
@@ -211,7 +237,7 @@ export function CodeWorkspace({ projectId }: { projectId: string }) {
 
   return (
     <>
-      <div className="flex h-[580px] overflow-hidden rounded-2xl bg-surface-2 ring-hair">
+      <div className="flex h-[75vh] overflow-hidden rounded-2xl bg-surface-2 ring-hair">
         <aside className="flex w-60 flex-shrink-0 flex-col border-r border-border bg-surface-inset">
           <div className="flex items-center justify-between px-4 py-3">
             <span className="text-[10px] font-medium uppercase tracking-wider text-muted">
@@ -265,21 +291,25 @@ export function CodeWorkspace({ projectId }: { projectId: string }) {
                   setDirty(true)
                 }}
                 beforeMount={(monaco) => {
-                  monaco.editor.defineTheme("forge-dark", {
-                    base: "vs-dark",
-                    inherit: true,
-                    rules: [],
-                    colors: {
-                      "editor.background": "#0C0C0E",
-                      "editor.lineHighlightBackground": "#141417",
-                      "editorLineNumber.foreground": "#4A4A4F",
-                      "editorGutter.background": "#0C0C0E",
-                    },
-                  })
+                  try {
+                    monaco.editor.defineTheme("forge-dark", {
+                      base: "vs-dark",
+                      inherit: true,
+                      rules: [],
+                      colors: {
+                        "editor.background": "#0C0C0E",
+                        "editor.lineHighlightBackground": "#141417",
+                        "editorLineNumber.foreground": "#4A4A4F",
+                        "editorGutter.background": "#0C0C0E",
+                      },
+                    })
+                  } catch (e) {
+                    console.error("Failed to define Monaco theme", e)
+                  }
                 }}
                 options={{
                   minimap: { enabled: false },
-                  fontSize: 13,
+                  fontSize: 14,
                   scrollBeyondLastLine: false,
                   padding: { top: 14, bottom: 14 },
                   automaticLayout: true,

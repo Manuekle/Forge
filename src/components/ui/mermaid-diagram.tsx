@@ -82,11 +82,21 @@ function quoteFlowchartLabels(def: string): string {
 
 function candidates(def: string): string[] {
   const normalized = normalizeDefinition(def)
-  const list = [normalized]
+  
+  // Inject requested configuration
+  const config = `---
+config:
+  look: classic
+  fontFamily: "Inter Tight"
+---
+`
+  const defWithConfig = def.startsWith("---") ? def : `${config}${normalized}`
+  
+  const list = [defWithConfig]
   const type = normalized.trim().split(/\s/)[0]
   if (type === "graph" || type === "flowchart") {
     const quoted = quoteFlowchartLabels(normalized)
-    if (quoted !== normalized) list.push(quoted)
+    if (quoted !== normalized) list.push(`${config}${quoted}`)
   }
   return list
 }
@@ -95,6 +105,7 @@ const darkThemeVariables = {
   darkMode: true,
   background: "transparent",
   fontSize: "14px",
+  fontFamily: "sans-serif",
   primaryColor: "#1F1F23",
   primaryTextColor: "#FAFAFA",
   primaryBorderColor: "#E85002",
@@ -129,6 +140,7 @@ const lightThemeVariables = {
   darkMode: false,
   background: "transparent",
   fontSize: "14px",
+  fontFamily: "sans-serif",
   primaryColor: "#FFE9DB",
   primaryTextColor: "#1A1A1A",
   primaryBorderColor: "#E85002",
@@ -176,24 +188,32 @@ export function MermaidDiagram({ definition }: { definition: string }) {
         if (cancelled) return
 
         const theme = isDark ? "dark" : "light"
-        if (theme !== lastTheme) {
-          lastTheme = theme
-          mermaid.initialize({
-            startOnLoad: false,
-            suppressErrorRendering: true,
-            theme: "base",
-            themeVariables: isDark ? darkThemeVariables : lightThemeVariables,
-          })
-        }
+        
+        // Ensure mermaid is completely re-initialized for every attempt
+        mermaid.initialize({
+          startOnLoad: false,
+          suppressErrorRendering: true,
+          securityLevel: "loose", // Slightly more permissive to prevent render failure
+          theme: "base",
+          themeVariables: isDark ? darkThemeVariables : lightThemeVariables,
+        })
+        lastTheme = theme
 
         for (const def of candidates(definition)) {
           const renderId = `mermaid-r${++renderSeq}`
           try {
+            // Clean up any potential leftover from previous failed attempts
+            cleanupOrphanedElements(renderId)
+            
+            // Render the diagram
             const result = await mermaid.render(renderId, def)
             if (cancelled) return
-            // Sanitize the SVG to prevent XSS while allowing SVG specific tags/attrs
+            
+            // Use DOMPurify with configuration to explicitly allow text content in SVG elements
             const sanitized = DOMPurify.sanitize(result.svg, {
               USE_PROFILES: { svg: true },
+              ADD_TAGS: ["style", "text", "tspan"],
+              ADD_ATTR: ["style", "font-family", "font-size", "fill", "text-anchor", "x", "y", "dy"],
             })
             setSvg(sanitized)
             setError(false)
@@ -201,14 +221,16 @@ export function MermaidDiagram({ definition }: { definition: string }) {
           } catch (err) {
             cleanupOrphanedElements(renderId)
             if (cancelled) return
-            console.warn("[mermaid] render attempt failed", renderId, err)
+            console.error("[mermaid] render attempt failed", renderId, err)
           }
         }
         if (!cancelled) {
+          console.error("[mermaid] all render candidates failed")
           setSvg(null)
           setError(true)
         }
-      } catch {
+      } catch (err) {
+        console.error("[mermaid] unexpected error", err)
         if (!cancelled) {
           setSvg(null)
           setError(true)
