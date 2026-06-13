@@ -82,18 +82,25 @@ function quoteFlowchartLabels(def: string): string {
 
 /**
  * LLMs over-apply the flowchart "quote every label" rule to gantt charts,
- * emitting `title ["X"]` / `dateFormat["YYYY-MM-DD"]`, which gantt rejects.
- * Strip the stray brackets/quotes from gantt header keywords.
+ * emitting flowchart node syntax everywhere — `title["X"]`,
+ * `section["Sprints"]`, `S1["Sprint 1"] :s1, 2024-01-01, 14d`. Gantt rejects
+ * brackets/quotes on these, so the whole diagram fails to render. Rewrite each
+ * line back to valid gantt syntax.
  */
+const GANTT_HEADER = /^(\s*)(title|dateFormat|axisFormat|excludes|includes|todayMarker|tickInterval|weekday|section)\b\s*\[?\s*"?(.*?)"?\s*\]?\s*$/
+// `ID["Label"] :meta` or `["Label"] :meta` → `Label :meta` (drop id + brackets)
+const GANTT_TASK = /^(\s*)\w*\[\s*"?(.*?)"?\s*\]\s*(:.*)$/
+
 function fixGanttHeaders(def: string): string {
   return def
     .split("\n")
-    .map((line) =>
-      line.replace(
-        /^(\s*(?:title|dateFormat|axisFormat|excludes|todayMarker|tickInterval|weekday)\b)\s*\[?\s*"?(.*?)"?\s*\]?\s*$/,
-        (_m, kw: string, val: string) => `${kw} ${val.trim()}`
-      )
-    )
+    .map((line) => {
+      const hdr = line.match(GANTT_HEADER)
+      if (hdr) return `${hdr[1]}${hdr[2]} ${hdr[3].trim()}`
+      const task = line.match(GANTT_TASK)
+      if (task) return `${task[1]}${task[2].trim()} ${task[3].trim()}`
+      return line
+    })
     .join("\n")
 }
 
