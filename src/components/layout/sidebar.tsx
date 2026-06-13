@@ -108,7 +108,8 @@ function UserCard() {
   return (
     <div ref={ref} className="relative m-2">
       <button
-        onClick={() => setOpen(!open)}
+        onClick={() => { setOpen(!open) }}
+        aria-label="User menu"
         className="flex w-full items-center gap-3 rounded-full bg-surface-2 p-3 text-left lift-1 transition-colors hover:bg-surface-3"
       >
         <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full gradient-brand text-white">

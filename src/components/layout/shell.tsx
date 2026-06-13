@@ -50,7 +50,7 @@ export function Shell({
             latestRun={latestRun || undefined}
             onMenuToggle={() => setMobileMenuOpen((v) => !v)}
           />
-          <div className="relative flex-1 overflow-auto">{children}</div>
+          <div id="main-content" className="relative flex-1 overflow-auto">{children}</div>
         </div>
       </div>
     </div>

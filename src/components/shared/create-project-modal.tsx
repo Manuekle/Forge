@@ -56,10 +56,11 @@ export function CreateProjectModal({ open, onOpenChange, onCreated }: CreateProj
 
   return (
     <Modal open={open} onOpenChange={onOpenChange} title="New project" description="Describe your idea or use a template.">
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-4" aria-busy={loading}>
         <div>
-          <label className="text-xs font-medium text-text-secondary block mb-1.5">Project name</label>
+          <label htmlFor="project-name" className="text-xs font-medium text-text-secondary block mb-1.5">Project name</label>
           <Input
+            id="project-name"
             placeholder="e.g. HomePlate"
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -68,8 +69,9 @@ export function CreateProjectModal({ open, onOpenChange, onCreated }: CreateProj
           />
         </div>
         <div>
-          <label className="text-xs font-medium text-text-secondary block mb-1.5">Description</label>
+          <label htmlFor="project-desc" className="text-xs font-medium text-text-secondary block mb-1.5">Description</label>
           <Input
+            id="project-desc"
             placeholder="What does your product do?"
             value={desc}
             onChange={(e) => setDesc(e.target.value)}

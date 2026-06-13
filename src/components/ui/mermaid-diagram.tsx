@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useTheme } from "next-themes"
+import DOMPurify from "dompurify"
 import { Modal } from "@/components/ui/modal"
 import { ArrowExpand01Icon, RefreshIcon } from "@hugeicons/core-free-icons"
 import { Icon } from "@/components/ui/icon"
@@ -190,7 +191,11 @@ export function MermaidDiagram({ definition }: { definition: string }) {
           try {
             const result = await mermaid.render(renderId, def)
             if (cancelled) return
-            setSvg(result.svg)
+            // Sanitize the SVG to prevent XSS while allowing SVG specific tags/attrs
+            const sanitized = DOMPurify.sanitize(result.svg, {
+              USE_PROFILES: { svg: true },
+            })
+            setSvg(sanitized)
             setError(false)
             return
           } catch (err) {

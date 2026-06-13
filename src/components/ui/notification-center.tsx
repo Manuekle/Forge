@@ -104,6 +104,7 @@ export function NotificationCenter() {
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen(!open)}
+        aria-label={`Notifications ${activeCount > 0 ? `(${activeCount} new)` : ""}`}
         className="relative flex h-9 w-9 items-center justify-center rounded-full text-muted transition-all hover:bg-surface-2 hover:text-text-primary"
       >
         <Icon icon={Notification01Icon} size={17} />

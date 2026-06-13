@@ -36,6 +36,7 @@ export function Navbar({ breadcrumb = "Dashboard", projectMode, latestRun, onMen
         <div className="flex items-center gap-1">
           <button
             onClick={() => setFeedbackOpen(true)}
+            aria-label="Give feedback"
             className="flex h-9 w-9 items-center justify-center rounded-full text-muted transition-all duration-200 hover:bg-hover-strong hover:text-text-primary"
           >
             <Icon icon={Megaphone02Icon} size={16} />
