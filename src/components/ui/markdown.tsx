@@ -62,7 +62,17 @@ export function stripMarkdown(text: string): string {
 
 export function Markdown({ content }: { content: string }) {
   const rendered = useMemo(() => {
-    const lines = content.split("\n")
+    let raw = content.trim()
+
+    // Strip wrapping markdown code block if it encompasses the whole content
+    if (raw.startsWith("```markdown") && raw.endsWith("```")) {
+      raw = raw.replace(/^```markdown\n?/, "").replace(/\n?```$/, "").trim()
+    } else if (raw.toLowerCase().startsWith("markdown\n") || raw.toLowerCase().startsWith("markdown ")) {
+      // Strip leading "markdown" if it's just a label
+      raw = raw.replace(/^markdown\s+/i, "").trim()
+    }
+
+    const lines = raw.split("\n")
     const blocks: React.ReactNode[] = []
     let idx = 0
     let i = 0
@@ -147,8 +157,8 @@ export function Markdown({ content }: { content: string }) {
         continue
       }
 
-      // Heading ## or ###
-      const hMatch = trimmed.match(/^(#{2,4})\s+(.+)$/)
+      // Heading #, ##, or ###
+      const hMatch = trimmed.match(/^(#{1,4})\s+(.+)$/)
       if (hMatch) {
         i++
         const level = hMatch[1].length

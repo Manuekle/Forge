@@ -2,7 +2,6 @@
 
 import { useState } from "react"
 import { signIn } from "next-auth/react"
-import { useRouter } from "next/navigation"
 import Image from "next/image"
 import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
@@ -11,7 +10,6 @@ import { Icon } from "@/components/ui/icon"
 import { SparklesIcon, Mail01Icon, LockIcon } from "@hugeicons/core-free-icons"
 
 export default function SignInPage() {
-  const router = useRouter()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
@@ -28,8 +26,9 @@ export default function SignInPage() {
       setError("Invalid credentials")
       setLoading(false)
     } else {
-      router.push("/dashboard")
-      router.refresh()
+      // Force a full reload to ensure the session is properly synchronized
+      // and picked up by the middleware/server components.
+      window.location.href = "/dashboard"
     }
   }
 
