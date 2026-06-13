@@ -80,9 +80,28 @@ function quoteFlowchartLabels(def: string): string {
     .join("\n")
 }
 
+/**
+ * LLMs over-apply the flowchart "quote every label" rule to gantt charts,
+ * emitting `title ["X"]` / `dateFormat["YYYY-MM-DD"]`, which gantt rejects.
+ * Strip the stray brackets/quotes from gantt header keywords.
+ */
+function fixGanttHeaders(def: string): string {
+  return def
+    .split("\n")
+    .map((line) =>
+      line.replace(
+        /^(\s*(?:title|dateFormat|axisFormat|excludes|todayMarker|tickInterval|weekday)\b)\s*\[?\s*"?(.*?)"?\s*\]?\s*$/,
+        (_m, kw: string, val: string) => `${kw} ${val.trim()}`
+      )
+    )
+    .join("\n")
+}
+
 function candidates(def: string): string[] {
-  const normalized = normalizeDefinition(def)
-  
+  let normalized = normalizeDefinition(def)
+  const type = normalized.trim().split(/\s/)[0]
+  if (type === "gantt") normalized = fixGanttHeaders(normalized)
+
   // Inject requested configuration
   const config = `---
 config:
@@ -91,9 +110,8 @@ config:
 ---
 `
   const defWithConfig = def.startsWith("---") ? def : `${config}${normalized}`
-  
+
   const list = [defWithConfig]
-  const type = normalized.trim().split(/\s/)[0]
   if (type === "graph" || type === "flowchart") {
     const quoted = quoteFlowchartLabels(normalized)
     if (quoted !== normalized) list.push(`${config}${quoted}`)
