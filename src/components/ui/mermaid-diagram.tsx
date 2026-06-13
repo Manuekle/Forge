@@ -195,6 +195,11 @@ export function MermaidDiagram({ definition }: { definition: string }) {
           suppressErrorRendering: true,
           securityLevel: "loose", // Slightly more permissive to prevent render failure
           theme: "base",
+          // Render labels as native SVG <text> instead of HTML in <foreignObject>.
+          // DOMPurify strips foreignObject contents, which blanked flowchart/ER
+          // box text while leaving the shapes intact.
+          htmlLabels: false,
+          flowchart: { htmlLabels: false },
           themeVariables: isDark ? darkThemeVariables : lightThemeVariables,
         })
         lastTheme = theme
@@ -209,7 +214,10 @@ export function MermaidDiagram({ definition }: { definition: string }) {
             const result = await mermaid.render(renderId, def)
             if (cancelled) return
             
-            // Use DOMPurify with configuration to explicitly allow text content in SVG elements
+            // Labels render as SVG <text>/<tspan> (htmlLabels disabled at init),
+            // so the svg profile keeps them. Note: mermaid's default htmlLabels
+            // wraps labels in <foreignObject>, whose contents DOMPurify strips —
+            // that made flowchart/ER box text vanish.
             const sanitized = DOMPurify.sanitize(result.svg, {
               USE_PROFILES: { svg: true },
               ADD_TAGS: ["style", "text", "tspan"],
