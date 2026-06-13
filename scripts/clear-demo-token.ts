@@ -1,4 +1,4 @@
-import { getDb, schema } from "../src/db/index.ts";
+import { getDb, schema } from "../src/db/index";
 import { eq } from "drizzle-orm";
 
 async function run() {
