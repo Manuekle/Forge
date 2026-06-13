@@ -1062,132 +1062,147 @@ const dbStore: DataStore = {
 // ===========================================================================
 
 async function seedDemo(s: DataStore, userId: string) {
+  // Project 1: Aura Energy (The Demo Project - Active/Review)
   const p1 = await s.createProject({
     userId,
-    name: "HomePlate",
-    description: "Marketplace connecting home cooks with local food lovers. Pickup-first MVP.",
+    name: "Aura Energy",
+    description: "Decentralized energy marketplace for P2P power trading on Azure Blockchain.",
     template: "marketplace",
   })
   await s.updateProject(p1.id, { status: "active" })
 
+  // Project 2: Quantum Logistics (The Success Story - Approved)
   const p2 = await s.createProject({
     userId,
-    name: "Atlas CRM",
-    description: "Lightweight CRM for solo consultants with automated follow-ups.",
+    name: "Quantum Logistics",
+    description: "Autonomous drone fleet orchestration for last-mile medical delivery.",
     template: "saas",
   })
+  await s.updateProject(p2.id, { status: "approved" })
 
+  // Project 3: HealthLink AI (Active - Mid Progress)
   const p3 = await s.createProject({
     userId,
-    name: "PulseFit",
-    description: "Habit-based fitness coaching app with adaptive plans.",
+    name: "HealthLink AI",
+    description: "Predictive diagnostics platform for rural clinics using Edge computing.",
     template: "ai-workspace",
   })
   await s.updateProject(p3.id, { status: "active" })
 
-  const d1 = await s.createDecision(p1.id, "Should buyers be required to create an account?")
-  await s.addDecisionEntry(d1.id, "pm", "Authentication should be required — order history and messaging depend on identity.")
-  await s.addDecisionEntry(d1.id, "architect", "That increases implementation complexity. Every anonymous flow needs a parallel path.")
-  await s.addDecisionEntry(d1.id, "qa", "Without auth there are real security concerns — fraud surface and zero traceability.")
-  await s.resolveDecision(d1.id, "Authentication required. Guests browse freely; one-tap OAuth at checkout.", 0.87)
+  // Project 4: Space-X Logistics (Planning - New)
+  const p4 = await s.createProject({
+    userId,
+    name: "Interstellar Cargo",
+    description: "Supply chain management for multi-planetary resource extraction.",
+    template: "saas",
+  })
 
-  const d2 = await s.createDecision(p1.id, "Should we support Stripe Connect or custom payments?")
-  await s.addDecisionEntry(d2.id, "pm", "Stripe Connect reduces time-to-market significantly and handles compliance.")
-  await s.addDecisionEntry(d2.id, "architect", "Connect adds PCI scope but custom gives full control over fee splitting.")
-  await s.addDecisionEntry(d2.id, "business", "Connect is cheaper to maintain. Let Stripe handle KYC and fraud.")
+  // --- Aura Energy Decisions & Artifacts ---
+  const d1 = await s.createDecision(p1.id, "Compliance vs Blockchain Transparency")
+  await s.addDecisionEntry(d1.id, "pm", "We need to comply with GDPR 2026 while maintaining the ledger's integrity.")
+  await s.addDecisionEntry(d1.id, "architect", "Zero-knowledge proofs could bridge the gap between privacy and verification.")
+  await s.addDecisionEntry(d1.id, "qa", "Rejection: Proposed initial flow exposes PII on the public ledger. Requires revision.")
+  await s.resolveDecision(d1.id, "Consensus reached: Implementation of ZK-Rollups to handle private trading data off-chain with public verification.", 0.95, {
+    pm: { vote: "approve", confidence: 0.9, concerns: "", round: 1 },
+    architect: { vote: "approve", confidence: 0.95, concerns: "", round: 2 },
+    qa: { vote: "approve", confidence: 0.92, concerns: "Audit trail verified for round 2 architecture", round: 2 },
+  })
 
-  await s.createArtifact(p1.id, "prd", "Product Requirements Document", `## Overview\nHomePlate is a two-sided marketplace connecting home cooks with local food lovers. The platform enables cooks to list homemade meals and buyers to discover, order, and pick up food within their neighborhood.\n\n## Goals\nLaunch MVP within 8 weeks with 50 cooks and 500 active buyers in the pilot neighborhood.\n\n## User Stories\n- As a buyer, I want to browse available meals near me so I can find something I like.\n- As a buyer, I want to place an order so I can pick it up at a scheduled time.\n- As a cook, I want to list my meals with photos and prices so buyers can discover them.\n- As a cook, I want to manage orders so I can prepare on time.`)
-  await s.createArtifact(p1.id, "architecture", "System Architecture", `## Architecture\n- Next.js 15 frontend with TailwindCSS\n- PostgreSQL database with Drizzle ORM\n- Auth.js for authentication\n- Azure OpenAI for agent reasoning\n- Stripe Connect for payments\n- Vercel deployment\n\n## API Design\n- RESTful API with Next.js App Router\n- Server Actions for mutations`)
-  await s.createArtifact(p1.id, "ux", "User Flows", `## User Flows\n\n### Buyer Flow\n1. Land on home page → browse meals by location\n2. Filter by cuisine, price, distance\n3. Select meal → view details\n4. Place order → choose pickup time\n5. Pay → receive confirmation\n6. Pick up → rate experience`)
+  await s.createArtifact(p1.id, "prd", "PRD: Aura Energy Core", `## Overview\nAura Energy is a decentralized P2P energy trading platform built on Azure Blockchain. It allows prosumers to sell excess solar energy directly to neighbors.\n\n## Core Pillars\n1. **Decentralization**: No central utility intermediary.\n2. **Privacy**: GDPR 2026 compliant via ZK-Proofs.\n3. **Scalability**: Capable of 10k transactions per second via L2 scaling.`)
+  
+  await s.createArtifact(p1.id, "architecture", "System Architecture v2", `## Tech Stack\n- **Frontend**: Next.js 15 (App Router)\n- **Blockchain**: Azure Managed Confidential Ledger\n- **Compute**: Azure Functions for ZK-generation\n- **Identity**: Microsoft Entra Verified ID\n\n## High-Level Design\nThe system uses a Hybrid-Mesh topology for energy routing signals...`)
 
+  // --- Quantum Logistics Decisions (Approved Project) ---
+  const d2 = await s.createDecision(p2.id, "Drone Fleet Communication Protocol")
+  await s.resolveDecision(d2.id, "Standardized on Starlink-based satellite backhaul for 100% coverage in rural areas.", 0.98, {
+    architect: { vote: "approve", confidence: 0.98, concerns: "", round: 1 },
+    qa: { vote: "approve", confidence: 0.96, concerns: "", round: 1 },
+  })
+  
+  await s.createArtifact(p2.id, "prd", "PRD: Drone Fleet v1.0", "Full specification for medical delivery drones...")
+  await s.createArtifact(p2.id, "architecture", "Drone Control Mesh", "Diagram and spec for autonomous swarm coordination...")
+
+  // --- Aura Energy Run (The Demo Run Replay) ---
   const run = await s.createRun(p1.id)
-  // Demo plan + event stream: a faithful replay of a real orchestrated run so
-  // the orchestration view is fully populated without waiting for a live run.
   await s.setRunPlan(run.id, {
-    strategy: "Ground the marketplace in business viability first, then product, UX and architecture; QA reviews everything before consensus.",
+    strategy: "Analyze GDPR 2026 impact on P2P energy trading. Architect must propose privacy-preserving ledger updates. QA must verify against compliance corpus.",
     selected: [
-      { agent: "business", reason: "Two-sided marketplace — monetization and liquidity strategy must anchor every other decision." },
-      { agent: "pm", reason: "Define the pickup-first MVP scope, user stories and success metrics." },
-      { agent: "ux", reason: "Buyer and cook journeys are the core of a food marketplace experience." },
-      { agent: "architect", reason: "Payments, identity and ordering need explicit API and data-model decisions." },
-      { agent: "qa", reason: "Food safety, fraud and payment risks demand adversarial review before consensus." },
+      { agent: "pm", reason: "Define the legal constraints and user privacy requirements." },
+      { agent: "architect", reason: "Propose ZK-Proof architecture for energy ledgers." },
+      { agent: "qa", reason: "Adversarial review of data leakage on public chains." },
+      { agent: "business", reason: "Validate that privacy compliance doesn't break the marketplace liquidity." },
     ],
     skipped: [
-      { agent: "scrum", reason: "Design-stage request — sprint planning deferred until the architecture stabilizes." },
+      { agent: "ux", reason: "UI flows are secondary to the core architectural compliance challenge." },
+      { agent: "scrum", reason: "Sprints will be planned after architectural sign-off." },
     ],
     source: "model",
     log: [
-      { at: "[00:09.41]", type: "plan", detail: "5 selected · 1 skipped", reason: "order: business → pm → ux → architect → qa" },
-      { at: "[01:29.12]", type: "revision", detail: "QA critique routed to architect (round 2)", reason: "Escrow release flow lacks dispute-window handling for no-show pickups" },
-      { at: "[02:41.30]", type: "confidence", detail: "confidence 0.87 from 5 votes", reason: "vote score 0.86 (3 approve / 2 concerns / 0 reject) · self-reported 0.89 · blended 0.7/0.3" },
+      { at: "[00:05.10]", type: "plan", detail: "4 agents selected", reason: "Reasoning focus: Compliance" },
+      { at: "[01:10.22]", type: "revision", detail: "QA rejected architect (round 1)", reason: "Ledger leak detected" },
     ],
   })
+
   const demoEvents: RunEvent[] = []
-  const baseTs = Date.now() - 167_000
+  const baseTs = Date.now() - 3600 * 1000
   let seq = 0
   const ev = (at: string, e: Omit<RunEvent, "at" | "ts">) => {
-    demoEvents.push({ at, ts: new Date(baseTs + ++seq * 1500).toISOString(), ...e })
+    demoEvents.push({ at, ts: new Date(baseTs + ++seq * 1000).toISOString(), ...e })
   }
-  ev("[00:00.48]", { kind: "retrieval", agent: "orchestrator", detail: "Retrieved 3 grounded sources (local-corpus)", summary: "[S1] Marketplace Trust & Safety · [S2] Marketplace Liquidity & Pricing · [S3] Application Security Baseline" })
-  ev("[00:09.41]", { kind: "plan", agent: "orchestrator", detail: "Ground the marketplace in business viability first, then product, UX and architecture; QA reviews everything before consensus.", summary: "business → pm → ux → architect → qa · skipped: scrum" })
-  const demoFlow: { agent: string; from: string; t0: number; vote: string; conf: number; summary: string }[] = [
-    { agent: "business", from: "orchestrator", t0: 10, vote: "approve", conf: 0.84, summary: "Commission-on-order revenue model with cook subscription upsell" },
-    { agent: "pm", from: "business", t0: 26, vote: "approve", conf: 0.82, summary: "Pickup-first MVP: browse, order, scheduled pickup, ratings" },
-    { agent: "ux", from: "pm", t0: 44, vote: "approve_with_concerns", conf: 0.78, summary: "Buyer flow in 5 steps; cook onboarding needs identity-verification UX [S1]" },
-    { agent: "architect", from: "ux", t0: 61, vote: "approve_with_concerns", conf: 0.8, summary: "Next.js + Postgres + Stripe Connect; escrow held until pickup confirmation [S2]" },
-    { agent: "qa", from: "architect", t0: 78, vote: "approve_with_concerns", conf: 0.72, summary: "Top risks: fraud surface without auth [S3], food-safety liability, dispute handling" },
-  ]
-  const mm = (sec: number) => `[${String(Math.floor(sec / 60)).padStart(2, "0")}:${String(sec % 60).padStart(2, "0")}.20]`
-  for (const f of demoFlow) {
-    ev(mm(f.t0), { kind: "handoff", from: f.from, to: f.agent, detail: `${f.from === "orchestrator" ? "Orchestrator delegates to" : "Output handed to"} ${f.agent}`, summary: f.summary })
-    ev(mm(f.t0 + 1), { kind: "agent_state", agent: f.agent, state: "reading_context", detail: "Reading project context + prior agent outputs + 3 grounded sources" })
-    ev(mm(f.t0 + 3), { kind: "agent_state", agent: f.agent, state: f.agent === "qa" ? "reviewing" : "reasoning", detail: f.agent === "qa" ? "Reviewing the team's work and assessing risks" : "Analyzing the request and generating output" })
-    ev(mm(f.t0 + 13), { kind: "agent_state", agent: f.agent, state: "voting", detail: "Casting vote on the project direction" })
-    ev(mm(f.t0 + 14), { kind: "vote", agent: f.agent, vote: f.vote, confidence: f.conf, detail: `${f.agent} voted ${f.vote.replace(/_/g, " ")} (confidence ${f.conf.toFixed(2)})` })
-    ev(mm(f.t0 + 15), { kind: "agent_state", agent: f.agent, state: "completed", detail: "Submitted output to the orchestrator", summary: f.summary })
-  }
-  ev("[01:29.12]", { kind: "checkpoint", agent: "orchestrator", from: "qa", to: "architect", detail: "QA critique routed to Architect for revision (round 2)", summary: "Escrow release flow lacks dispute-window handling for no-show pickups" })
-  ev("[01:30.02]", { kind: "agent_state", agent: "architect", state: "revising", detail: "Revising prior output (round 2)" })
-  ev("[01:52.44]", { kind: "vote", agent: "architect", vote: "approve", confidence: 0.85, detail: "architect voted approve (confidence 0.85)" })
-  ev("[01:53.10]", { kind: "agent_state", agent: "architect", state: "completed", detail: "Submitted revised output (round 2) to the orchestrator", summary: "Added 24h dispute window + escrow release state machine" })
-  ev("[02:41.30]", { kind: "vote", agent: "orchestrator", confidence: 0.87, detail: "Vote tally complete — run confidence 0.87", summary: "vote score 0.86 (3 approve / 2 concerns / 0 reject / 0 abstain) · self-reported 0.89 · blended 0.7/0.3" })
-  ev("[02:42.18]", { kind: "consensus", agent: "orchestrator", confidence: 0.87, detail: "Consensus reached (confidence 0.87, vote-derived)", summary: "Pickup-first marketplace MVP with required authentication, Stripe Connect escrow and a 24h dispute window." })
-  ev("[02:47.66]", { kind: "complete", agent: "orchestrator", confidence: 0.87, detail: "Run complete: 5 agents, 1 revision, 5 artifacts", summary: "execution path: business → pm → ux → architect → qa" })
+
+  ev("[00:00.00]", { kind: "retrieval", agent: "orchestrator", detail: "Retrieved 5 sources from Azure Compliance Corpus", summary: "Grounded in GDPR 2026 and Energy Ledger Standards" })
+  ev("[00:05.10]", { kind: "plan", agent: "orchestrator", detail: "Strategy: Privacy-first ledger architecture", summary: "pm → architect → qa → business" })
+  
+  // PM
+  ev("[00:10.00]", { kind: "agent_state", agent: "pm", state: "reasoning", detail: "Analyzing GDPR 2026 requirements" })
+  ev("[00:25.00]", { kind: "vote", agent: "pm", vote: "approve", confidence: 0.9, detail: "Compliance requirements mapped" })
+  ev("[00:26.00]", { kind: "agent_state", agent: "pm", state: "completed", detail: "Output handed to Architect" })
+
+  // Architect Round 1
+  ev("[00:30.00]", { kind: "agent_state", agent: "architect", state: "reasoning", detail: "Designing ledger schema" })
+  ev("[00:50.00]", { kind: "vote", agent: "architect", vote: "approve", confidence: 0.85, detail: "Initial architecture complete" })
+  ev("[00:51.00]", { kind: "agent_state", agent: "architect", state: "completed", detail: "Output handed to QA" })
+
+  // QA Round 1 (Rejection)
+  ev("[01:00.00]", { kind: "agent_state", agent: "qa", state: "reviewing", detail: "Scanning for data leakage" })
+  ev("[01:10.00]", { kind: "vote", agent: "qa", vote: "reject", confidence: 0.95, detail: "PII detected in public headers!" })
+  ev("[01:10.22]", { kind: "checkpoint", agent: "orchestrator", from: "qa", to: "architect", detail: "Revision requested: Remove PII from headers", summary: "Security Breach Prevention" })
+
+  // Architect Round 2 (Revision)
+  ev("[01:20.00]", { kind: "agent_state", agent: "architect", state: "revising", detail: "Implementing ZK-Rollups" })
+  ev("[01:50.00]", { kind: "vote", agent: "architect", vote: "approve", confidence: 0.95, detail: "Revised architecture (ZK) complete" })
+  ev("[01:51.00]", { kind: "agent_state", agent: "architect", state: "completed", detail: "Re-submitting to QA" })
+
+  // QA Round 2 (Approval)
+  ev("[02:00.00]", { kind: "agent_state", agent: "qa", state: "reviewing", detail: "Re-scanning revised schema" })
+  ev("[02:20.00]", { kind: "vote", agent: "qa", vote: "approve", confidence: 0.92, detail: "Compliance verified" })
+  ev("[02:21.00]", { kind: "agent_state", agent: "qa", state: "completed", detail: "Output handed to Business" })
+
+  // Finalization
+  ev("[02:40.00]", { kind: "consensus", agent: "orchestrator", confidence: 0.95, detail: "Consensus: Secure Energy Ledger achieved", summary: "Final architecture ready for implementation" })
+  ev("[02:50.00]", { kind: "complete", agent: "orchestrator", detail: "Run complete", summary: "4 agents · 1 revision · High Confidence" })
+
   for (const e of demoEvents) await s.appendRunEvent(run.id, e)
-  await s.completeRun(
-    run.id,
-    167,
-    [
-      { time: "[00:00.12]", action: "iq.intent.parse", detail: "marketplace / food / p2p" },
-      { time: "[00:00.48]", action: "iq.knowledge.retrieve", detail: "3 sources · local-corpus" },
-      { time: "[00:09.41]", action: "orchestrator.plan", detail: "5 selected · 1 skipped (scrum)" },
-      { time: "[00:14.20]", action: "debate.open", detail: "buyer-authentication" },
-      { time: "[01:29.12]", action: "orchestrator.revision", detail: "qa → architect · round 2" },
-      { time: "[02:41.30]", action: "vote.tally", detail: "3 approve / 2 concerns · confidence 0.87" },
-      { time: "[02:42.18]", action: "consensus.emit", detail: "confidence 0.87 (vote-derived)" },
-      { time: "[02:47.66]", action: "run.complete", detail: "5 artifacts" },
-    ],
-    [
-      { ref: "S1", id: "mkt-trust", title: "Marketplace Trust & Safety", source: "Forge KB / Marketplaces", score: 8, snippet: "Identity verification and escrow materially reduce fraud." },
-      { ref: "S2", id: "mkt-liquidity", title: "Marketplace Liquidity & Pricing", source: "Forge KB / Marketplaces", score: 6, snippet: "Stripe Connect and Adyen are the standard payment rails for marketplaces." },
-      { ref: "S3", id: "gen-security", title: "Application Security Baseline", source: "Forge KB / Engineering", score: 4, snippet: "Authenticate and authorize every API route; never rely on the client." },
-    ],
+  await s.completeRun(run.id, 170, 
+    [{ time: "+0.00s", action: "iq.intent.parse", detail: "energy / blockchain" }],
+    [{ ref: "G1", id: "gdpr-2026", title: "GDPR 2026 Regulation", source: "Azure Regulatory Compliance", score: 10, snippet: "Personal data on ledgers must be encrypted or zero-knowledge verified." }],
     {
-      confidence: 0.87,
-      consensus: "Pickup-first marketplace MVP with required authentication, Stripe Connect escrow and a 24h dispute window.",
+      confidence: 0.95,
+      consensus: "ZK-Rollup architecture for energy trading",
       votes: {
-        business: { vote: "approve", confidence: 0.84, concerns: "", round: 1 },
-        pm: { vote: "approve", confidence: 0.82, concerns: "", round: 1 },
-        ux: { vote: "approve_with_concerns", confidence: 0.78, concerns: "Cook onboarding needs identity-verification UX [S1]", round: 1 },
-        architect: { vote: "approve", confidence: 0.85, concerns: "", round: 2 },
-        qa: { vote: "approve_with_concerns", confidence: 0.72, concerns: "Food-safety liability and dispute handling need policy decisions", round: 1 },
-      },
+        pm: { vote: "approve", confidence: 0.9, concerns: "", round: 1 },
+        architect: { vote: "approve", confidence: 0.95, concerns: "", round: 2 },
+        qa: { vote: "approve", confidence: 0.92, concerns: "", round: 2 },
+        business: { vote: "approve", confidence: 0.88, concerns: "", round: 1 },
+      }
     }
   )
 
+  // Sync Progress
   await s.updateProject(p1.id, { progress: await s.getProjectProgress(p1.id) })
   await s.updateProject(p2.id, { progress: await s.getProjectProgress(p2.id) })
   await s.updateProject(p3.id, { progress: await s.getProjectProgress(p3.id) })
+  await s.updateProject(p4.id, { progress: await s.getProjectProgress(p4.id) })
 }
 
 export const store: DataStore = dbEnabled ? dbStore : memStore
