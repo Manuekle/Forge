@@ -138,7 +138,8 @@ You are also the team's reviewer. After the vote block, add EXACTLY this block:
 
 const MERMAID_RULES = `Use \`\`\`mermaid code blocks for diagrams. Strict Mermaid syntax rules — diagrams that break these fail to render:
 - Flowchart/graph ONLY: wrap every node, decision, and edge label in double quotes: A["Auth service (OAuth2)"], B{"Under 7 days?"}, C -->|"yes (retry)"| D. Never put parens, angle brackets, ampersands, semicolons, or braces in an unquoted label.
-- Do NOT bracket-wrap or quote keywords in other diagram types. Gantt: \`title My Roadmap\` and \`dateFormat YYYY-MM-DD\` take NO brackets/quotes; tasks are \`Task name :id, 2024-01-01, 30d\` under a \`section Name\`. Pie: \`pie title X\` then \`"Label" : 42\`. erDiagram/sequenceDiagram/classDiagram use their own syntax, not flowchart brackets.
+- Do NOT bracket-wrap or quote keywords in other diagram types. Gantt: \`title My Roadmap\` and \`dateFormat YYYY-MM-DD\` take NO brackets/quotes; tasks are \`Task name :id, 2024-01-01, 30d\` under a \`section Name\`. Pie: \`pie title X\` then \`"Label" : 42\`.
+- erDiagram: relationship lines use BARE entity names, never brackets — \`MERCHANT ||--o{ STORE : owns\`. Attributes go in a block: \`MERCHANT { string id string name }\`. sequenceDiagram/classDiagram likewise use their own syntax, not flowchart brackets.
 - Plain ASCII only — no smart quotes, em-dashes, or unicode arrows
 - Node IDs must be short and alphanumeric (A, B2, authSvc)
 - One statement per line; keep each diagram under 20 nodes`

@@ -104,10 +104,30 @@ function fixGanttHeaders(def: string): string {
     .join("\n")
 }
 
+/**
+ * The same flowchart-bracket over-application breaks erDiagrams:
+ * `MERCHANT["Merchant"] ||--o{ STORE["Store"] : owns`. Mermaid accepts the
+ * `ENTITY["Alias"]` form on attribute-block definitions but NOT on relationship
+ * lines, where entity names must be bare identifiers. Strip the brackets only
+ * from relationship lines (those carry the `--` cardinality), leaving valid
+ * alias blocks untouched.
+ */
+function fixErDiagram(def: string): string {
+  return def
+    .split("\n")
+    .map((line) =>
+      line.includes("--")
+        ? line.replace(/([A-Za-z_]\w*)\[\s*"?[^\]"]*"?\s*\]/g, "$1")
+        : line
+    )
+    .join("\n")
+}
+
 function candidates(def: string): string[] {
   let normalized = normalizeDefinition(def)
   const type = normalized.trim().split(/\s/)[0]
   if (type === "gantt") normalized = fixGanttHeaders(normalized)
+  if (type === "erDiagram") normalized = fixErDiagram(normalized)
 
   // Inject requested configuration
   const config = `---
