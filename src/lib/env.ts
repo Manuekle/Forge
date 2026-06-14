@@ -26,8 +26,11 @@ export function validateEnv(): void {
     if (process.env.STORE_DRIVER === "postgres" && !process.env.DATABASE_URL) {
       errors.push("DATABASE_URL is required when STORE_DRIVER=postgres")
     }
-    if (process.env.ALLOW_DEMO_LOGIN === "true") {
-      warnings.push("ALLOW_DEMO_LOGIN=true in production — the shared demo account is enabled")
+    const isDemoEnabled =
+      process.env.ALLOW_DEMO_LOGIN === "true" ||
+      process.env.NEXT_PUBLIC_ALLOW_DEMO_LOGIN === "true"
+    if (isDemoEnabled) {
+      warnings.push("Demo login is enabled in production — the shared demo account is accessible")
     }
     if (!process.env.UPSTASH_REDIS_REST_URL) {
       warnings.push("No Upstash Redis configured — rate limiting falls back to per-instance memory")

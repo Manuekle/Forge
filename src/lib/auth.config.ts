@@ -22,7 +22,11 @@ export const authConfig: NextAuthConfig = {
 
         // Demo account: only usable when explicitly enabled (never in prod by
         // default). Provisioned on first use; carries no real privileges.
-        if (process.env.ALLOW_DEMO_LOGIN === "true" && email === "demo@forge.dev" && password === "forge") {
+        const isDemoEnabled =
+          process.env.ALLOW_DEMO_LOGIN === "true" ||
+          process.env.NEXT_PUBLIC_ALLOW_DEMO_LOGIN === "true"
+
+        if (isDemoEnabled && email === "demo@forge.dev" && password === "forge") {
           const { getDb, schema } = await import("@/db")
           const { eq } = await import("drizzle-orm")
           const db = getDb()
