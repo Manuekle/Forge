@@ -1,13 +1,12 @@
 "use server"
 
 import { store } from "@/lib/store"
-import { auth } from "@/lib/auth"
+import { getUserId } from "@/lib/api-auth"
 import { revalidatePath } from "next/cache"
 import { clampText } from "@/lib/guard"
 
 async function requireUserId(): Promise<string> {
-  const session = await auth()
-  const userId = session?.user?.id
+  const userId = await getUserId()
   if (!userId) throw new Error("Unauthorized")
   return userId
 }

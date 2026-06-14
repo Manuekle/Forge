@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
-import { signOut } from "next-auth/react"
+import { createClient } from "@/lib/supabase/client"
 import { Shell } from "@/components/layout/shell"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -151,7 +151,8 @@ export default function SettingsPage() {
       const res = await fetch("/api/clear", { method: "POST" })
       if (res.ok) {
         toast({ title: "Account deleted", variant: "info" })
-        signOut({ callbackUrl: "/" })
+        await createClient().auth.signOut()
+        window.location.href = "/"
       } else {
         toast({ title: "Delete failed", variant: "error" })
       }

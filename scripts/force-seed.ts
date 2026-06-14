@@ -31,22 +31,20 @@ async function main() {
   const db = drizzle(client, { schema })
 
   const email = "demo@forge.dev"
-  let [user] = await db
+  const [user] = await db
     .select()
     .from(schema.users)
     .where(eq(schema.users.email, email))
     .limit(1)
 
   if (!user) {
-    const [created] = await db
-      .insert(schema.users)
-      .values({ email, name: "Jane Doe", emailVerified: new Date() })
-      .returning()
-    user = created
-    console.log("✓ Demo user created:", user.id)
-  } else {
-    console.log("✓ Demo user found:", user.id)
+    console.error(
+      "Demo user not found. Create it in Supabase Auth first:\n" +
+        "  npx tsx scripts/seed-demo-user.ts"
+    )
+    process.exit(1)
   }
+  console.log("✓ Demo user found:", user.id)
 
   console.log("🧹 Clearing old data for demo user...")
   // The store.clearUser method handles the cascaded cleanup in Drizzle/Postgres

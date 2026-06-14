@@ -1,9 +1,9 @@
 "use client"
 
 import { useState } from "react"
-import { signIn } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
+import { createClient } from "@/lib/supabase/client"
 import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Icon } from "@/components/ui/icon"
@@ -15,7 +15,11 @@ const PERKS = [
   "Full reasoning traces & decision history",
 ]
 
-const DEMO_ENABLED = process.env.NEXT_PUBLIC_ALLOW_DEMO_LOGIN === "true"
+// Never expose the demo button in a production build, even if the flag leaks
+// into the prod environment. Mirrors the server-side guard in auth.config.ts.
+const DEMO_ENABLED =
+  process.env.NODE_ENV !== "production" &&
+  process.env.NEXT_PUBLIC_ALLOW_DEMO_LOGIN === "true"
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -27,28 +31,40 @@ export default function RegisterPage() {
     e.preventDefault()
     setLoading(true)
     setError("")
-    try {
-      const res = await fetch("/api/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok) {
-        setError(data.error || "Registration failed")
-        setLoading(false)
-        return
-      }
-      const r = await signIn("credentials", { email: form.email, password: form.password, redirect: false })
-      if (r?.error) {
-        setError("Account created — please sign in")
-        router.push("/auth/signin")
-        return
-      }
-      router.push("/dashboard")
-      router.refresh()
-    } catch {
-      setError("Something went wrong. Try again.")
+    const supabase = createClient()
+    const { data, error: signUpError } = await supabase.auth.signUp({
+      email: form.email,
+      password: form.password,
+      options: { data: { name: form.name || null } },
+    })
+    if (signUpError) {
+      setError(signUpError.message || "Registration failed")
+      setLoading(false)
+      return
+    }
+    // With email confirmation disabled, signUp returns an active session.
+    // If confirmation is ever enabled, there is no session → tell the user.
+    if (!data.session) {
+      setError("Account created — check your email to confirm, then sign in.")
+      router.push("/auth/signin")
+      return
+    }
+    window.location.href = "/dashboard"
+  }
+
+  async function handleOAuth(provider: "azure" | "github") {
+    setLoading(true)
+    setError("")
+    const supabase = createClient()
+    const { error: oauthError } = await supabase.auth.signInWithOAuth({
+      provider,
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent("/dashboard")}`,
+        ...(provider === "azure" ? { scopes: "email openid profile" } : {}),
+      },
+    })
+    if (oauthError) {
+      setError("Couldn't start sign-up. Please try again.")
       setLoading(false)
     }
   }
@@ -129,13 +145,22 @@ export default function RegisterPage() {
             size="lg"
             className="w-full"
             disabled={loading}
-            onClick={() => {
-              setLoading(true)
-              signIn("microsoft-entra-id", { callbackUrl: "/dashboard" })
-            }}
+            onClick={() => handleOAuth("azure")}
           >
             <Image src="/sponsors/microsoft.svg" alt="" width={15} height={15} className="h-[15px] w-[15px]" />
             Sign up with Microsoft
+          </Button>
+
+          <Button
+            type="button"
+            variant="outline"
+            size="lg"
+            className="w-full"
+            disabled={loading}
+            onClick={() => handleOAuth("github")}
+          >
+            <Image src="/sponsors/GitHub_light.svg" alt="" width={15} height={15} className="h-[15px] w-[15px]" />
+            Sign up with GitHub
           </Button>
 
           {DEMO_ENABLED && (
@@ -145,13 +170,16 @@ export default function RegisterPage() {
               size="lg"
               className="w-full"
               disabled={loading}
-              onClick={() => {
+              onClick={async () => {
                 setLoading(true)
                 setError("")
-                signIn("credentials", { email: "demo@forge.dev", password: "forge", redirect: false }).then((r) => {
-                  if (r?.error) { setError("Demo sign-in failed"); setLoading(false) }
-                  else { router.push("/dashboard"); router.refresh() }
+                const supabase = createClient()
+                const { error: demoError } = await supabase.auth.signInWithPassword({
+                  email: "demo@forge.dev",
+                  password: "forgedemo",
                 })
+                if (demoError) { setError("Demo sign-in failed"); setLoading(false) }
+                else { window.location.href = "/dashboard" }
               }}
             >
               <Icon icon={Rocket01Icon} size={15} /> Try the demo account

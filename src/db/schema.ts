@@ -1,13 +1,15 @@
 import { pgTable, text, timestamp, uuid, integer, real, jsonb, index } from "drizzle-orm/pg-core"
 
+// Profile / settings table. The id mirrors Supabase Auth's `auth.users.id`
+// (kept in sync by the `handle_new_user` trigger), so it remains the owner key
+// for `projects.userId`. Auth credentials & OAuth identities live in the
+// GoTrue-managed `auth` schema, not here.
 export const users = pgTable("users", {
-  id: uuid("id").defaultRandom().primaryKey(),
+  id: uuid("id").primaryKey(),
   name: text("name"),
   email: text("email").unique().notNull(),
   emailVerified: timestamp("email_verified", { mode: "date", withTimezone: true }),
   image: text("image"),
-  // scrypt password hash for credential auth (null for OAuth-only accounts).
-  passwordHash: text("password_hash"),
   plan: text("plan").default("free").notNull(),
   githubToken: text("github_token"),
   jiraDomain: text("jira_domain"),
@@ -16,37 +18,6 @@ export const users = pgTable("users", {
   linearToken: text("linear_token"),
   createdAt: timestamp("created_at", { mode: "date", withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { mode: "date", withTimezone: true }).defaultNow().notNull(),
-})
-
-export const accounts = pgTable("accounts", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  userId: uuid("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  type: text("type").notNull(),
-  provider: text("provider").notNull(),
-  providerAccountId: text("provider_account_id").notNull(),
-  refresh_token: text("refresh_token"),
-  access_token: text("access_token"),
-  expires_at: integer("expires_at"),
-  token_type: text("token_type"),
-  scope: text("scope"),
-  id_token: text("id_token"),
-  session_state: text("session_state"),
-})
-
-export const sessions = pgTable("sessions", {
-  sessionToken: text("session_token").primaryKey().notNull(),
-  userId: uuid("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  expires: timestamp("expires", { mode: "date", withTimezone: true }).notNull(),
-})
-
-export const verificationTokens = pgTable("verification_tokens", {
-  identifier: text("identifier").notNull(),
-  token: text("token").notNull(),
-  expires: timestamp("expires", { mode: "date", withTimezone: true }).notNull(),
 })
 
 export const projects = pgTable(

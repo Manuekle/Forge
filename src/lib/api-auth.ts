@@ -1,17 +1,22 @@
 import { NextResponse } from "next/server"
-import { auth } from "@/lib/auth"
+import { createClient } from "@/lib/supabase/server"
 import { store, type StoredProject } from "@/lib/store"
 
 export type SessionUser = { id: string; email: string | null }
 
 /**
- * Returns the authenticated user (UUID + email from the session),
- * or null when there is no valid session.
+ * Returns the authenticated user (Supabase auth UUID + email), or null when
+ * there is no valid session. The id equals both `auth.users.id` and
+ * `public.users.id` (kept in sync by the on-signup trigger), so it can be used
+ * directly as the `projects.userId` owner key.
  */
 export async function getSessionUser(): Promise<SessionUser | null> {
-  const session = await auth()
-  if (!session?.user?.id) return null
-  return { id: session.user.id, email: session.user.email ?? null }
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return null
+  return { id: user.id, email: user.email ?? null }
 }
 
 /** Back-compat: just the user id. */

@@ -31,22 +31,21 @@ async function main() {
   const db = drizzle(client, { schema })
 
   const email = "demo@forge.dev"
-  let [user] = await db
+  const [user] = await db
     .select()
     .from(schema.users)
     .where(eq(schema.users.email, email))
     .limit(1)
 
   if (!user) {
-    const [created] = await db
-      .insert(schema.users)
-      .values({ email, name: "Jane Doe", emailVerified: new Date() })
-      .returning()
-    user = created
-    console.log("✓ Demo user created:", user.id)
-  } else {
-    console.log("✓ Demo user already exists:", user.id)
+    console.error(
+      "Demo user not found. Create it in Supabase Auth first:\n" +
+        "  npx tsx scripts/seed-demo-user.ts\n" +
+        "(the on_auth_user_created trigger then creates the public.users row)"
+    )
+    process.exit(1)
   }
+  console.log("✓ Demo user exists:", user.id)
 
   await store.seed(user.id)
   console.log("✓ Demo data seeded")

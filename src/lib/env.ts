@@ -4,12 +4,12 @@
  * on server startup.
  *
  * Rules only enforced when NODE_ENV === "production":
- *  - AUTH_SECRET must be set (NextAuth JWT signing).
+ *  - Supabase Auth must be configured (NEXT_PUBLIC_SUPABASE_URL + anon key).
  *  - A secrets key must exist (SECRETS_KEY or AUTH_SECRET) so integration tokens
  *    are encrypted at rest.
  *  - If STORE_DRIVER=postgres, DATABASE_URL must be present.
- *  - Demo login must be explicitly opted into (ALLOW_DEMO_LOGIN=true) — never on
- *    by default in production.
+ *  - Demo login is dev-only; it is force-disabled in production by the auth
+ *    code, so flags left enabled here only produce a warning.
  */
 import { logger } from "@/lib/logger"
 
@@ -19,7 +19,12 @@ export function validateEnv(): void {
   const warnings: string[] = []
 
   if (isProd) {
-    if (!process.env.AUTH_SECRET) errors.push("AUTH_SECRET is required in production")
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
+      errors.push("NEXT_PUBLIC_SUPABASE_URL is required in production")
+    }
+    if (!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+      errors.push("NEXT_PUBLIC_SUPABASE_ANON_KEY is required in production")
+    }
     if (!process.env.SECRETS_KEY && !process.env.AUTH_SECRET) {
       errors.push("SECRETS_KEY (or AUTH_SECRET) is required to encrypt integration tokens")
     }

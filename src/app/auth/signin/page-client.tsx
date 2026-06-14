@@ -2,22 +2,22 @@
 
 import { useState } from "react"
 import { useSearchParams } from "next/navigation"
-import { signIn } from "next-auth/react"
 import Image from "next/image"
 import { motion } from "framer-motion"
+import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Icon } from "@/components/ui/icon"
 import { SparklesIcon, Mail01Icon, LockIcon } from "@hugeicons/core-free-icons"
 
-// NextAuth redirects failed OAuth/config attempts back here with ?error=<code>.
-// Map the codes to messages users can act on instead of a raw enum.
+const DEMO_ENABLED =
+  process.env.NODE_ENV !== "production" &&
+  process.env.NEXT_PUBLIC_ALLOW_DEMO_LOGIN === "true"
+
+// Supabase redirects failed OAuth/callback attempts back here with ?error=<code>.
 const AUTH_ERROR_MESSAGES: Record<string, string> = {
-  Configuration: "Microsoft sign-in is not available right now. Please use email, or try again later.",
-  OAuthSignin: "Couldn't start Microsoft sign-in. Please try again.",
-  OAuthCallback: "Microsoft sign-in didn't complete. Please try again.",
-  OAuthAccountNotLinked: "This email is already registered. Sign in with your email and password.",
-  AccessDenied: "Access denied. Your Microsoft account isn't allowed to sign in here.",
+  OAuthCallback: "Sign-in didn't complete. Please try again.",
+  AccessDenied: "Access denied. Your account isn't allowed to sign in here.",
 }
 
 export default function SignInPage() {
@@ -30,20 +30,43 @@ export default function SignInPage() {
   )
   const [loading, setLoading] = useState(false)
 
+  async function signInWithPassword(emailValue: string, passwordValue: string) {
+    const supabase = createClient()
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: emailValue,
+      password: passwordValue,
+    })
+    if (signInError) {
+      setError("Invalid credentials")
+      setLoading(false)
+      return
+    }
+    // Full reload so the middleware/server components pick up the new session.
+    window.location.href = "/dashboard"
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
     setError("")
+    await signInWithPassword(email, password)
+  }
 
-    const result = await signIn("credentials", { email, password, redirect: false })
-
-    if (result?.error) {
-      setError("Invalid credentials")
+  async function handleOAuth(provider: "azure" | "github") {
+    setLoading(true)
+    setError("")
+    const supabase = createClient()
+    const next = "/dashboard"
+    const { error: oauthError } = await supabase.auth.signInWithOAuth({
+      provider,
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
+        ...(provider === "azure" ? { scopes: "email openid profile" } : {}),
+      },
+    })
+    if (oauthError) {
+      setError("Couldn't start sign-in. Please try again.")
       setLoading(false)
-    } else {
-      // Force a full reload to ensure the session is properly synchronized
-      // and picked up by the middleware/server components.
-      window.location.href = "/dashboard"
     }
   }
 
@@ -81,13 +104,22 @@ export default function SignInPage() {
             size="lg"
             className="w-full"
             disabled={loading}
-            onClick={() => {
-              setLoading(true)
-              signIn("microsoft-entra-id", { callbackUrl: "/dashboard" })
-            }}
+            onClick={() => handleOAuth("azure")}
           >
             <Image src="/sponsors/microsoft.svg" alt="" width={15} height={15} className="h-[15px] w-[15px]" />
             Continue with Microsoft
+          </Button>
+
+          <Button
+            type="button"
+            variant="outline"
+            size="lg"
+            className="w-full"
+            disabled={loading}
+            onClick={() => handleOAuth("github")}
+          >
+            <Image src="/sponsors/GitHub_light.svg" alt="" width={15} height={15} className="h-[15px] w-[15px]" />
+            Continue with GitHub
           </Button>
 
           <div className="flex items-center gap-3">
@@ -115,6 +147,23 @@ export default function SignInPage() {
           <Button type="submit" size="lg" className="w-full" disabled={loading}>
             {loading ? "Signing in…" : <><Icon icon={SparklesIcon} size={15} /> Sign in</>}
           </Button>
+
+          {DEMO_ENABLED && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="w-full"
+              disabled={loading}
+              onClick={() => {
+                setLoading(true)
+                setError("")
+                signInWithPassword("demo@forge.dev", "forgedemo")
+              }}
+            >
+              Try the demo account
+            </Button>
+          )}
 
           <p className="text-center text-xs text-muted">
             New to Forge?{" "}
