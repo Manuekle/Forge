@@ -6,6 +6,8 @@ export const users = pgTable("users", {
   email: text("email").unique().notNull(),
   emailVerified: timestamp("email_verified", { mode: "date", withTimezone: true }),
   image: text("image"),
+  // scrypt password hash for credential auth (null for OAuth-only accounts).
+  passwordHash: text("password_hash"),
   plan: text("plan").default("free").notNull(),
   githubToken: text("github_token"),
   jiraDomain: text("jira_domain"),
@@ -148,6 +150,10 @@ export const runs = pgTable("runs", {
     .$type<Record<string, { vote: string; confidence: number | null; concerns: string; round: number }>>()
     .default({}),
   consensus: text("consensus"),
+  // Public share slug. When set, this run's Decision Record is viewable at
+  // /d/<shareId> with no auth. NULL = private (the default). Unique so the
+  // slug is an unguessable, stable permalink.
+  shareId: text("share_id").unique(),
   createdAt: timestamp("created_at", { mode: "date", withTimezone: true }).defaultNow().notNull(),
 },
   (t) => [index("runs_project_created_idx").on(t.projectId, t.createdAt.desc())]

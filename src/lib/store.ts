@@ -1,5 +1,14 @@
 import { dbEnabled, getDb, schema } from "@/db"
 import { and, eq, desc, sql } from "drizzle-orm"
+import { decryptSecret, encryptSecret, encryptionAvailable } from "@/lib/crypto"
+
+/**
+ * Encrypt a secret for persistence when a key is configured; otherwise store
+ * as-is (zero-config dev). `decryptSecret` transparently handles both, so this
+ * is a forward-only migration — existing plaintext rows keep working.
+ */
+const sealSecret = (v: string | null): string | null =>
+  v && encryptionAvailable() ? encryptSecret(v) : v
 
 export type StoredProject = {
   id: string
@@ -100,10 +109,14 @@ export type StoredRun = {
   confidence: number | null
   votes: Record<string, DecisionVote>
   consensus: string | null
+  shareId: string | null
   createdAt: Date
 }
 
 export type StoredRunWithProject = StoredRun & { projectName: string }
+
+/** A publicly-shared run plus the minimal project context its record needs. */
+export type PublicRunRecord = StoredRun & { projectName: string; projectDescription: string }
 
 export type Activity = {
   id: string
@@ -186,6 +199,8 @@ export interface DataStore {
   updateCodeFile(id: string, content: string): Promise<StoredCodeFile | null>
   getRuns(projectId: string): Promise<StoredRun[]>
   getAllRuns(userId: string): Promise<StoredRunWithProject[]>
+  getRunByShareId(shareId: string): Promise<PublicRunRecord | null>
+  setRunShare(runId: string, shareId: string | null): Promise<void>
   createRun(projectId: string): Promise<StoredRun>
   setRunPlan(id: string, plan: StoredRunPlan): Promise<void>
   updateRunProgress(id: string, progress: string): Promise<void>
@@ -487,9 +502,21 @@ const memStore: DataStore = {
       }))
   },
 
+  async getRunByShareId(shareId) {
+    const r = runs.find((x) => x.shareId === shareId)
+    if (!r) return null
+    const p = projects.find((x) => x.id === r.projectId)
+    return { ...r, projectName: p?.name ?? "Untitled project", projectDescription: p?.description ?? "" }
+  },
+
+  async setRunShare(runId, shareId) {
+    const r = runs.find((x) => x.id === runId)
+    if (r) r.shareId = shareId
+  },
+
   async createRun(projectId) {
     const run: StoredRun = {
-      id: uid(), projectId, status: "running", progress: null, duration: null, trace: [], plan: null, citations: [], events: [], confidence: null, votes: {}, consensus: null, createdAt: new Date(),
+      id: uid(), projectId, status: "running", progress: null, duration: null, trace: [], plan: null, citations: [], events: [], confidence: null, votes: {}, consensus: null, shareId: null, createdAt: new Date(),
     }
     runs.push(run)
     return run
@@ -657,6 +684,7 @@ function mapRun(r: typeof schema.runs.$inferSelect): StoredRun {
     confidence: r.confidence ?? null,
     votes: r.votes ?? {},
     consensus: r.consensus ?? null,
+    shareId: r.shareId ?? null,
     createdAt: r.createdAt,
   }
 }
@@ -927,9 +955,29 @@ const dbStore: DataStore = {
       confidence: r.confidence ?? null,
       votes: {},
       consensus: r.consensus ?? null,
+      shareId: null,
       createdAt: r.createdAt,
       projectName: r.projectName,
     }))
+  },
+
+  async getRunByShareId(shareId) {
+    const [row] = await getDb()
+      .select()
+      .from(schema.runs)
+      .innerJoin(schema.projects, eq(schema.runs.projectId, schema.projects.id))
+      .where(eq(schema.runs.shareId, shareId))
+      .limit(1)
+    if (!row) return null
+    return {
+      ...mapRun(row.runs),
+      projectName: row.projects.name,
+      projectDescription: row.projects.description ?? "",
+    }
+  },
+
+  async setRunShare(runId, shareId) {
+    await getDb().update(schema.runs).set({ shareId }).where(eq(schema.runs.id, runId))
   },
 
   async createRun(projectId) {
@@ -1014,17 +1062,18 @@ const dbStore: DataStore = {
 
   async getUserGithubToken(userId) {
     const [row] = await getDb().select().from(schema.users).where(eq(schema.users.id, userId)).limit(1)
-    return row?.githubToken ?? null
+    return decryptSecret(row?.githubToken ?? null)
   },
 
   async setUserGithubToken(userId, token) {
-    await getDb().update(schema.users).set({ githubToken: token }).where(eq(schema.users.id, userId))
+    await getDb().update(schema.users).set({ githubToken: sealSecret(token) }).where(eq(schema.users.id, userId))
   },
 
   async getUserJiraConfig(userId) {
     const [row] = await getDb().select().from(schema.users).where(eq(schema.users.id, userId)).limit(1)
-    if (!row?.jiraDomain || !row.jiraEmail || !row.jiraToken) return null
-    return { domain: row.jiraDomain, email: row.jiraEmail, token: row.jiraToken }
+    const token = decryptSecret(row?.jiraToken ?? null)
+    if (!row?.jiraDomain || !row.jiraEmail || !token) return null
+    return { domain: row.jiraDomain, email: row.jiraEmail, token }
   },
 
   async setUserJiraConfig(userId, config) {
@@ -1033,18 +1082,18 @@ const dbStore: DataStore = {
       .set({
         jiraDomain: config?.domain ?? null,
         jiraEmail: config?.email ?? null,
-        jiraToken: config?.token ?? null,
+        jiraToken: sealSecret(config?.token ?? null),
       })
       .where(eq(schema.users.id, userId))
   },
 
   async getUserLinearToken(userId) {
     const [row] = await getDb().select().from(schema.users).where(eq(schema.users.id, userId)).limit(1)
-    return row?.linearToken ?? null
+    return decryptSecret(row?.linearToken ?? null)
   },
 
   async setUserLinearToken(userId, token) {
-    await getDb().update(schema.users).set({ linearToken: token }).where(eq(schema.users.id, userId))
+    await getDb().update(schema.users).set({ linearToken: sealSecret(token) }).where(eq(schema.users.id, userId))
   },
 
   async seed(userId) {

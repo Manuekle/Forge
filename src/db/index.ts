@@ -16,7 +16,19 @@ let _db: PostgresJsDatabase<typeof schema> | null = null
 export function getDb(): PostgresJsDatabase<typeof schema> {
   if (!dbEnabled) throw new Error("Database is not enabled (set STORE_DRIVER=postgres)")
   if (!_db) {
-    const client = postgres(process.env.DATABASE_URL!, { max: 5, prepare: false })
+    // Prefer a pooled connection string (PgBouncer/Supabase pooler/Neon) in
+    // serverless, where each instance opens its own connections — an unpooled
+    // direct URL exhausts Postgres' connection limit under load.
+    const connectionString = process.env.DATABASE_POOL_URL || process.env.DATABASE_URL!
+    const client = postgres(connectionString, {
+      // Keep per-instance connections small; many instances × large max = outage.
+      max: Number(process.env.DB_POOL_MAX) || 5,
+      idle_timeout: 20, // close idle conns (seconds) so they return to the pooler
+      connect_timeout: 10,
+      max_lifetime: 60 * 30, // recycle conns every 30m to avoid stale sockets
+      // Transaction-mode poolers (PgBouncer) don't support prepared statements.
+      prepare: false,
+    })
     _db = drizzle(client, { schema })
   }
   return _db

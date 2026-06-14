@@ -16,35 +16,30 @@ export const authConfig: NextAuthConfig = {
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        const email = credentials?.email as string
-        const password = credentials?.password as string
+        const email = (credentials?.email as string | undefined)?.trim().toLowerCase() ?? ""
+        const password = (credentials?.password as string | undefined) ?? ""
+        if (!email || !password) return null
 
-        if (email !== "demo@forge.dev" || password !== "forge") return null
-
-        const { getDb, schema } = await import("@/db")
-        const { eq } = await import("drizzle-orm")
-
-        const db = getDb()
-
-        let [user] = await db
-          .select()
-          .from(schema.users)
-          .where(eq(schema.users.email, email))
-          .limit(1)
-
-        if (!user) {
-          const [created] = await db
-            .insert(schema.users)
-            .values({
-              email,
-              name: "Jane Doe",
-              emailVerified: new Date(),
-            })
-            .returning()
-          user = created
+        // Demo account: only usable when explicitly enabled (never in prod by
+        // default). Provisioned on first use; carries no real privileges.
+        if (process.env.ALLOW_DEMO_LOGIN === "true" && email === "demo@forge.dev" && password === "forge") {
+          const { getDb, schema } = await import("@/db")
+          const { eq } = await import("drizzle-orm")
+          const db = getDb()
+          let [user] = await db.select().from(schema.users).where(eq(schema.users.email, email)).limit(1)
+          if (!user) {
+            const [created] = await db
+              .insert(schema.users)
+              .values({ email, name: "Demo User", emailVerified: new Date() })
+              .returning()
+            user = created
+          }
+          return { id: user.id, name: user.name, email: user.email, image: user.image }
         }
 
-        return { id: user.id, name: user.name, email: user.email, image: user.image }
+        // Real credential auth: verify the scrypt password hash.
+        const { verifyCredentials } = await import("@/lib/auth-users")
+        return await verifyCredentials(email, password)
       },
     }),
   ],

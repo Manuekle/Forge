@@ -78,6 +78,13 @@
       "when": 1781300398393,
       "tag": "0010_faulty_valkyrie",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1781392665827,
+      "tag": "0011_add_password_hash",
+      "breakpoints": true
     }
   ]
 }

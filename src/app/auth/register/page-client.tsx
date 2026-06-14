@@ -15,10 +15,43 @@ const PERKS = [
   "Full reasoning traces & decision history",
 ]
 
+const DEMO_ENABLED = process.env.NEXT_PUBLIC_ALLOW_DEMO_LOGIN === "true"
+
 export default function RegisterPage() {
   const router = useRouter()
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
+  const [form, setForm] = useState({ name: "", email: "", password: "" })
+
+  async function handleRegister(e: React.FormEvent) {
+    e.preventDefault()
+    setLoading(true)
+    setError("")
+    try {
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setError(data.error || "Registration failed")
+        setLoading(false)
+        return
+      }
+      const r = await signIn("credentials", { email: form.email, password: form.password, redirect: false })
+      if (r?.error) {
+        setError("Account created — please sign in")
+        router.push("/auth/signin")
+        return
+      }
+      router.push("/dashboard")
+      router.refresh()
+    } catch {
+      setError("Something went wrong. Try again.")
+      setLoading(false)
+    }
+  }
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-canvas p-6">
@@ -41,10 +74,6 @@ export default function RegisterPage() {
 
         <div className="space-y-4 rounded-[var(--radius-panel)] glass-strong p-7">
           <h1 className="text-center text-lg font-semibold text-text-primary" style={{ fontFamily: "var(--font-syne)" }}>Create your account</h1>
-          <p className="text-center text-xs leading-relaxed text-text-secondary">
-            Your account is created automatically the first time you sign in.
-          </p>
-
           <div className="flex flex-col gap-2 rounded-2xl bg-surface-inset/60 p-4 ring-hair">
             {PERKS.map((perk) => (
               <div key={perk} className="flex items-center gap-2.5">
@@ -56,19 +85,37 @@ export default function RegisterPage() {
             ))}
           </div>
 
-          <Button
-            type="button"
-            size="lg"
-            className="w-full"
-            disabled={loading}
-            onClick={() => {
-              setLoading(true)
-              signIn("microsoft-entra-id", { callbackUrl: "/dashboard" })
-            }}
-          >
-            <Image src="/sponsors/microsoft.svg" alt="" width={15} height={15} className="h-[15px] w-[15px]" />
-            Sign up with Microsoft
-          </Button>
+          <form onSubmit={handleRegister} className="flex flex-col gap-3">
+            <input
+              type="text"
+              autoComplete="name"
+              placeholder="Name (optional)"
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              className="w-full rounded-2xl bg-surface-inset px-4 py-2.5 text-sm text-text-primary outline-none ring-hair placeholder:text-muted focus:ring-2 focus:ring-brand/40"
+            />
+            <input
+              type="email"
+              required
+              autoComplete="email"
+              placeholder="you@company.com"
+              value={form.email}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
+              className="w-full rounded-2xl bg-surface-inset px-4 py-2.5 text-sm text-text-primary outline-none ring-hair placeholder:text-muted focus:ring-2 focus:ring-brand/40"
+            />
+            <input
+              type="password"
+              required
+              autoComplete="new-password"
+              placeholder="Password (min 10 chars, mixed case + number)"
+              value={form.password}
+              onChange={(e) => setForm({ ...form, password: e.target.value })}
+              className="w-full rounded-2xl bg-surface-inset px-4 py-2.5 text-sm text-text-primary outline-none ring-hair placeholder:text-muted focus:ring-2 focus:ring-brand/40"
+            />
+            <Button type="submit" size="lg" className="w-full" disabled={loading}>
+              Create account
+            </Button>
+          </form>
 
           <div className="flex items-center gap-3">
             <div className="h-px flex-1 bg-hairline" />
@@ -84,15 +131,32 @@ export default function RegisterPage() {
             disabled={loading}
             onClick={() => {
               setLoading(true)
-              setError("")
-              signIn("credentials", { email: "demo@forge.dev", password: "forge", redirect: false }).then((r) => {
-                if (r?.error) { setError("Demo sign-in failed"); setLoading(false) }
-                else { router.push("/dashboard"); router.refresh() }
-              })
+              signIn("microsoft-entra-id", { callbackUrl: "/dashboard" })
             }}
           >
-            <Icon icon={Rocket01Icon} size={15} /> Try the demo account
+            <Image src="/sponsors/microsoft.svg" alt="" width={15} height={15} className="h-[15px] w-[15px]" />
+            Sign up with Microsoft
           </Button>
+
+          {DEMO_ENABLED && (
+            <Button
+              type="button"
+              variant="outline"
+              size="lg"
+              className="w-full"
+              disabled={loading}
+              onClick={() => {
+                setLoading(true)
+                setError("")
+                signIn("credentials", { email: "demo@forge.dev", password: "forge", redirect: false }).then((r) => {
+                  if (r?.error) { setError("Demo sign-in failed"); setLoading(false) }
+                  else { router.push("/dashboard"); router.refresh() }
+                })
+              }}
+            >
+              <Icon icon={Rocket01Icon} size={15} /> Try the demo account
+            </Button>
+          )}
 
           {error && (
             <motion.p initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} className="rounded-full bg-error/12 px-3 py-2 text-center text-xs text-error">

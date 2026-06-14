@@ -1,7 +1,10 @@
-import { NextResponse, after } from "next/server"
+import { NextResponse } from "next/server"
 import { store, type StoredArtifact } from "@/lib/store"
-import { runAgentOrchestration } from "@/lib/orchestrator"
 import { requireProjectAccess } from "@/lib/api-auth"
+import { rateLimit } from "@/lib/rate-limit"
+import { sanitizeForPrompt } from "@/lib/guard"
+import { enqueueOrchestrationRun } from "@/lib/queue"
+import { logger } from "@/lib/logger"
 
 // A full orchestration is many sequential model calls (plan, agents,
 // checkpoints, consensus, artifacts) — minutes of wall time, not seconds.
@@ -36,6 +39,10 @@ export async function POST(
   if (!access.ok) return access.response
   const project = access.project
 
+  // Orchestration runs spend real model tokens — cap per user to bound cost/abuse.
+  const limited = await rateLimit(`runs:${access.userId}`, { limit: 20, windowMs: 60 * 60_000 })
+  if (!limited.ok) return limited.response
+
   const [prevArtifacts, prevDecisions, prevRuns] = await Promise.all([
     store.getArtifacts(id),
     store.getDecisions(id),
@@ -53,21 +60,19 @@ export async function POST(
     }
   }
 
-  // Parse optional brief from the request body
+  // Parse optional brief from the request body. Untrusted user text — sanitize
+  // before it can reach the model (prompt-injection mitigation, length bound).
   let brief: string | null = null
   try {
     const body = await request.json()
     if (typeof body.brief === "string" && body.brief.trim()) {
-      brief = body.brief.trim()
+      brief = sanitizeForPrompt(body.brief, 8000)
     }
   } catch {
     // no body or invalid JSON — proceed without brief
   }
 
   const run = await store.createRun(id)
-  // Wall-clock start on this process — run.createdAt round-trips through the DB
-  // and must not be trusted for elapsed-time math.
-  const startedAt = Date.now()
 
   const lines: string[] = []
   if (prevDecisions.length > 0) {
@@ -95,62 +100,20 @@ export async function POST(
   }
   const projectMemory = lines.join("\n")
 
-  // Execute the orchestration after the response is sent — a run is minutes
-  // of sequential model calls and must not hold the client's request open.
-  // The UI polls the run row for progress, events and completion.
-  after(async () => {
-    try {
-      const result = await runAgentOrchestration(
-        {
-          projectName: project.name,
-          projectDescription: project.description,
-          brief,
-          template: project.template,
-          projectMemory,
-        },
-        undefined,
-        (step) => store.updateRunProgress(run.id, step),
-        // Persist the orchestrator's plan before any agent executes — the plan
-        // and its reasoning survive even if the run later fails.
-        (plan) => store.setRunPlan(run.id, plan),
-        // Stream structured execution events (states, handoffs, votes,
-        // checkpoints) to the run row so the UI can render the live timeline.
-        (event) => store.appendRunEvent(run.id, event)
-      )
-
-      // Create a decision from the orchestration
-      const decision = await store.createDecision(id, `Product analysis: ${project.name}`)
-      for (const entry of result.decisions) {
-        await store.addDecisionEntry(decision.id, entry.agent, entry.entry)
-      }
-      await store.resolveDecision(decision.id, result.consensus, result.confidence, result.votes)
-
-      // Store artifacts
-      for (const artifact of result.artifacts) {
-        await store.createArtifact(id, artifact.type, artifact.title, artifact.content)
-      }
-
-      const duration = Math.floor((Date.now() - startedAt) / 1000)
-
-      // Persist the real trace + grounded citations, and fold the orchestrator's
-      // full decision log into the stored plan for traceability.
-      await store.setRunPlan(run.id, { ...result.plan, log: result.orchestratorLog })
-      await store.completeRun(run.id, duration, result.trace, result.citations, {
-        confidence: result.confidence,
-        votes: result.votes,
-        consensus: result.consensus,
-      })
-      const progress = await store.getProjectProgress(id)
-      await store.updateProject(id, {
-        progress,
-        status: progress >= 100 ? "in_review" : "active",
-        updatedAt: new Date(),
-      })
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : String(err)
-      await store.failRun(run.id, [{ time: "[00:00.01]", action: "run.failed", detail: errorMessage }])
-    }
+  // Hand the run to the durable queue. With QStash configured this survives a
+  // process restart (the worker endpoint re-drives it); otherwise it falls back
+  // to in-process background execution. Either way the request returns at once
+  // and the UI tracks progress via the run row / SSE stream.
+  await enqueueOrchestrationRun({
+    runId: run.id,
+    projectId: id,
+    projectName: project.name,
+    projectDescription: project.description,
+    brief,
+    template: project.template,
+    projectMemory,
   })
 
+  logger.info("run.enqueued", { runId: run.id, projectId: id, userId: access.userId })
   return NextResponse.json(run, { status: 202 })
 }

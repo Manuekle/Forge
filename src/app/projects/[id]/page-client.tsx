@@ -44,6 +44,7 @@ import {
   PencilEdit01Icon,
   ArrowUpRight02Icon,
   SourceCodeIcon,
+  Link01Icon,
 } from "@hugeicons/core-free-icons"
 import { Icon, type IconSvgElement } from "@/components/ui/icon"
 import { KanbanBoard } from "@/components/kanban/board"
@@ -94,6 +95,7 @@ function ProjectPageInner({ projectId }: { projectId: string }) {
   const [running, setRunning] = useState(false)
   const [newTopic, setNewTopic] = useState("")
   const [showExport, setShowExport] = useState(false)
+  const [sharingRun, setSharingRun] = useState(false)
   const [showRunContext, setShowRunContext] = useState(false)
   const [selectedVersion, setSelectedVersion] = useState(1)
   const [editingArtifact, setEditingArtifact] = useState(false)
@@ -102,6 +104,7 @@ function ProjectPageInner({ projectId }: { projectId: string }) {
   const [debatingTopic, setDebatingTopic] = useState<string | null>(null)
   const [runElapsed, setRunElapsed] = useState(0)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const esRef = useRef<EventSource | null>(null)
   // Run id that existed before the user pressed "New run" — the poll ignores
   // it so a stale completed run can't be mistaken for the new one finishing.
   const baselineRunRef = useRef<string | null>(null)
@@ -138,7 +141,10 @@ function ProjectPageInner({ projectId }: { projectId: string }) {
 
   useEffect(() => {
     load()
-    return () => { if (pollRef.current) clearInterval(pollRef.current) }
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current)
+      esRef.current?.close()
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId])
 
@@ -151,57 +157,86 @@ function ProjectPageInner({ projectId }: { projectId: string }) {
     return () => clearInterval(t)
   }, [running])
 
-  /** Poll the run row while executing — events grow, graph animates live. */
-  function startPolling() {
-    if (pollRef.current) return
-    setRunning(true)
-    pollRef.current = setInterval(async () => {
-      try {
-        const runsRes = await fetch(`/api/projects/${projectId}/runs`)
-        if (!runsRes.ok) return
-        const all: StoredRun[] = await runsRes.json()
-        // Only re-render when the latest run actually changed — every setRuns
-        // re-renders the whole workspace tree.
-        setRuns((prev) => {
-          const a = Array.isArray(all) ? all : []
-          const p0 = prev[0]
-          const n0 = a[0]
-          if (
-            p0 && n0 &&
-            prev.length === a.length &&
-            p0.id === n0.id &&
-            p0.status === n0.status &&
-            p0.progress === n0.progress &&
-            (p0.events?.length ?? 0) === (n0.events?.length ?? 0)
-          ) {
-            return prev
-          }
-          return a
-        })
-        const latest = all[0]
-        if (!latest) return
-        // The new run hasn't been created yet — keep waiting.
-        if (latest.id === baselineRunRef.current && latest.status !== "running") return
-        if (latest.status === "completed") {
-          stopPolling()
-          load((fresh) => {
-            const latestOfType = fresh
-              .filter((a) => a.type.toLowerCase() === activeDeliverable.toLowerCase())
-              .sort((a, b) => b.version - a.version)[0]
-            if (latestOfType) setSelectedVersion(latestOfType.version)
-          })
-          toast({ title: "Run complete", description: "Agents reached consensus and generated deliverables.", variant: "success" })
-        } else if (latest.status === "failed") {
-          stopPolling()
-          toast({ title: "Run failed", description: "Check the Memory tab for the trace.", variant: "error" })
+  /** Refresh the run list from the server and drive completion side effects. */
+  async function refreshRuns(): Promise<void> {
+    try {
+      const runsRes = await fetch(`/api/projects/${projectId}/runs`)
+      if (!runsRes.ok) return
+      const all: StoredRun[] = await runsRes.json()
+      // Only re-render when the latest run actually changed — every setRuns
+      // re-renders the whole workspace tree.
+      setRuns((prev) => {
+        const a = Array.isArray(all) ? all : []
+        const p0 = prev[0]
+        const n0 = a[0]
+        if (
+          p0 && n0 &&
+          prev.length === a.length &&
+          p0.id === n0.id &&
+          p0.status === n0.status &&
+          p0.progress === n0.progress &&
+          (p0.events?.length ?? 0) === (n0.events?.length ?? 0)
+        ) {
+          return prev
         }
-      } catch { /* poll silently */ }
-    }, 1500)
+        return a
+      })
+      const latest = all[0]
+      if (!latest) return
+      if (latest.id === baselineRunRef.current && latest.status !== "running") return
+      if (latest.status === "completed") {
+        stopPolling()
+        load((fresh) => {
+          const latestOfType = fresh
+            .filter((a) => a.type.toLowerCase() === activeDeliverable.toLowerCase())
+            .sort((a, b) => b.version - a.version)[0]
+          if (latestOfType) setSelectedVersion(latestOfType.version)
+        })
+        toast({ title: "Run complete", description: "Agents reached consensus and generated deliverables.", variant: "success" })
+      } else if (latest.status === "failed") {
+        stopPolling()
+        toast({ title: "Run failed", description: "Check the Memory tab for the trace.", variant: "error" })
+      }
+    } catch { /* refresh silently */ }
+  }
+
+  /**
+   * Track a running orchestration. Prefer a single SSE connection (server pushes
+   * status/event deltas, so the client refreshes only when something changed);
+   * fall back to interval polling if EventSource is unavailable or errors.
+   */
+  function startPolling() {
+    if (pollRef.current || esRef.current) return
+    setRunning(true)
+
+    if (typeof EventSource !== "undefined") {
+      try {
+        const es = new EventSource(`/api/projects/${projectId}/runs/stream`)
+        esRef.current = es
+        const onUpdate = () => { void refreshRuns() }
+        es.addEventListener("status", onUpdate)
+        es.addEventListener("events", onUpdate)
+        es.addEventListener("done", () => { void refreshRuns(); es.close(); esRef.current = null })
+        es.onerror = () => {
+          // Stream dropped — close it and fall back to polling.
+          es.close()
+          esRef.current = null
+          if (!pollRef.current) pollRef.current = setInterval(() => void refreshRuns(), 1500)
+        }
+        return
+      } catch {
+        esRef.current = null
+      }
+    }
+
+    pollRef.current = setInterval(() => void refreshRuns(), 1500)
   }
 
   function stopPolling() {
     if (pollRef.current) clearInterval(pollRef.current)
     pollRef.current = null
+    esRef.current?.close()
+    esRef.current = null
     setRunning(false)
   }
 
@@ -313,6 +348,23 @@ function ProjectPageInner({ projectId }: { projectId: string }) {
       toast({ title: "GitHub push failed", description: err.error, variant: "error" })
     }
     setPushingToGitHub(false)
+  }
+
+  async function handleShareRun() {
+    if (!viewRun || viewRun.status !== "completed") return
+    setSharingRun(true)
+    try {
+      const res = await fetch(`/api/projects/${projectId}/runs/${viewRun.id}/share`, { method: "POST" })
+      if (!res.ok) throw new Error()
+      const { path } = await res.json()
+      const url = `${window.location.origin}${path}`
+      await navigator.clipboard.writeText(url).catch(() => {})
+      toast({ title: "Public link copied", description: url, variant: "success" })
+    } catch {
+      toast({ title: "Couldn't create share link", description: "Try again in a moment.", variant: "error" })
+    } finally {
+      setSharingRun(false)
+    }
   }
 
   async function handleParseBacklog() {
@@ -634,7 +686,19 @@ function ProjectPageInner({ projectId }: { projectId: string }) {
                         <SectionHeading icon={Telescope01Icon}>
                           Execution graph
                         </SectionHeading>
-                        <span className="ml-auto font-mono text-[10px] font-normal normal-case tracking-normal text-muted">
+                        {viewRun.status === "completed" && (
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            className="ml-auto"
+                            disabled={sharingRun}
+                            onClick={handleShareRun}
+                          >
+                            <Icon icon={Link01Icon} size={14} />
+                            {viewRun.shareId ? "Copy public link" : "Share"}
+                          </Button>
+                        )}
+                        <span className={cn("font-mono text-[10px] font-normal normal-case tracking-normal text-muted", viewRun.status === "completed" ? "ml-3" : "ml-auto")}>
                           run #{viewRun.id.slice(0, 6)}
                           {view.isLive && <span className="ml-1.5 inline-flex items-center gap-1 rounded-full bg-brand-subtle px-2 py-0.5 text-[10px] font-medium text-brand">
                             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-brand" />

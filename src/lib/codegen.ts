@@ -1,10 +1,12 @@
-const rawEndpoint =
-  process.env.CODEGEN_AZURE_ENDPOINT || "https://meerazo7-8610-resource.openai.azure.com/openai/v1"
+// No hardcoded infrastructure endpoints — configuration comes from the
+// environment only. codegen is considered configured only when BOTH the
+// endpoint and key are present.
+const rawEndpoint = process.env.CODEGEN_AZURE_ENDPOINT || ""
 const apiKey = process.env.CODEGEN_AZURE_API_KEY || ""
 const deployment = process.env.CODEGEN_AZURE_DEPLOYMENT || "gpt-4.1"
 const TIMEOUT_MS = Number(process.env.CODEGEN_TIMEOUT_MS) || 240000
 
-export const codegenConfigured = !!apiKey
+export const codegenConfigured = !!(apiKey && rawEndpoint)
 
 export type GeneratedFile = { path: string; content: string }
 
@@ -23,8 +25,8 @@ function chatUrl(): string {
 }
 
 async function complete(messages: { role: "system" | "user" | "assistant"; content: string }[], maxTokens = 16000): Promise<string> {
-  if (!apiKey) {
-    throw new CodegenError("Code agent is not configured. Set CODEGEN_AZURE_API_KEY in the environment.", 503)
+  if (!apiKey || !rawEndpoint) {
+    throw new CodegenError("Code agent is not configured. Set CODEGEN_AZURE_ENDPOINT and CODEGEN_AZURE_API_KEY in the environment.", 503)
   }
 
   const controller = new AbortController()

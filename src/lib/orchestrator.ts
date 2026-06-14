@@ -14,6 +14,7 @@
 
 import { complete, aiConfigured } from "@/lib/foundry-iq"
 import { retrieveKnowledge, type Citation } from "@/lib/knowledge"
+import { sanitizeForPrompt } from "@/lib/guard"
 import type { RunEvent } from "@/lib/store"
 
 export type WorkerAgentId = "pm" | "ux" | "architect" | "qa" | "scrum" | "business"
@@ -250,7 +251,7 @@ Respond with STRICT JSON only:
 // ---------------------------------------------------------------------------
 
 /** Extract the first balanced top-level JSON object/array from model output. */
-function extractJson(raw: string): unknown {
+export function extractJson(raw: string): unknown {
   const start = raw.search(/[{[]/)
   if (start === -1) return null
   const open = raw[start]
@@ -302,7 +303,7 @@ type ParsedAgentOutput = {
 }
 
 /** Parse the vote + critique blocks off an agent response; return cleaned body. */
-function parseAgentOutput(raw: string): ParsedAgentOutput {
+export function parseAgentOutput(raw: string): ParsedAgentOutput {
   let body = raw
   let vote: VoteValue = "abstain"
   let confidence: number | null = null
@@ -354,7 +355,7 @@ function voteFooter(p: ParsedAgentOutput): string {
 }
 
 /** Derive run confidence from the actual vote tally — never from the model's claim. */
-function tallyConfidence(votes: Record<string, AgentVote>): {
+export function tallyConfidence(votes: Record<string, AgentVote>): {
   confidence: number
   counts: Record<VoteValue, number>
   detail: string
@@ -408,10 +409,17 @@ export async function runAgentOrchestration(
   const { projectName, projectDescription, brief, template, projectMemory } = args
   const startTime = Date.now()
 
-  const contextSummary = `Project: ${projectName}
-Description: ${projectDescription}
-${brief ? `\n## Detailed Context\n${brief}\n` : ""}
-${template ? `Template: ${template}` : ""}
+  // Defense-in-depth: all user-controlled text is sanitized before being
+  // embedded in agent prompts, even if a caller already sanitized upstream.
+  const safeName = sanitizeForPrompt(projectName, 200)
+  const safeDescription = sanitizeForPrompt(projectDescription, 4000)
+  const safeBrief = brief ? sanitizeForPrompt(brief, 8000) : null
+  const safeTemplate = template ? sanitizeForPrompt(template, 60) : null
+
+  const contextSummary = `Project: ${safeName}
+Description: ${safeDescription}
+${safeBrief ? `\n## Detailed Context\n${safeBrief}\n` : ""}
+${safeTemplate ? `Template: ${safeTemplate}` : ""}
 ${projectMemory ? `\n${projectMemory}` : ""}`
 
   const decisions: OrchestrationResult["decisions"] = []
@@ -447,8 +455,8 @@ ${projectMemory ? `\n${projectMemory}` : ""}`
   trace.push({ time: elapsed(), action: "iq.intent.parse", detail: `project: ${projectName}` })
 
   // Foundry IQ agentic retrieval: ground the run in real, cited sources.
-  const retrieval = await retrieveKnowledge(`${projectName}. ${projectDescription}`, {
-    domain: template || null,
+  const retrieval = await retrieveKnowledge(`${safeName}. ${safeDescription}`, {
+    domain: safeTemplate || null,
     topK: 4,
     signal,
   })

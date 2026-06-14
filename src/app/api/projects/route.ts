@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { store } from "@/lib/store"
 import { requireUser } from "@/lib/api-auth"
 import { clampText, safeJson } from "@/lib/guard"
+import { rateLimit } from "@/lib/rate-limit"
 
 export async function GET() {
   const authed = await requireUser()
@@ -18,6 +19,9 @@ export async function GET() {
 export async function POST(request: Request) {
   const authed = await requireUser()
   if (!authed.ok) return authed.response
+
+  const limited = await rateLimit(`projects:create:${authed.userId}`, { limit: 30, windowMs: 60 * 60_000 })
+  if (!limited.ok) return limited.response
 
   const body = await safeJson(request)
   const name = clampText(body.name, 120)

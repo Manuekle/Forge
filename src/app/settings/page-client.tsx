@@ -49,6 +49,9 @@ export default function SettingsPage() {
   const [savingLinear, setSavingLinear] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [showScopeGuide, setShowScopeGuide] = useState(false)
+  // Secrets are never sent back by the API; track only connection status so we
+  // can show "Connected" and prefill the non-secret Jira domain/email fields.
+  const [connected, setConnected] = useState({ github: false, jira: false, linear: false })
 
   const isDemo = profile.email === "demo@forge.dev"
 
@@ -57,18 +60,20 @@ export default function SettingsPage() {
       .then((r) => r.ok ? r.json() : null)
       .then((data) => {
         if (!data) return
-        
-        // Load githubToken from API, or from localStorage if demo
+
         if (isDemo) {
           setGithubToken(localStorage.getItem("forge-github-token") || "")
-        } else if (data.githubToken) {
-          setGithubToken(data.githubToken)
         }
-        
-        if (data.jiraDomain || data.jiraEmail || data.jiraToken) {
-          setJira({ domain: data.jiraDomain ?? "", email: data.jiraEmail ?? "", token: data.jiraToken ?? "" })
+
+        setConnected({
+          github: !!data.github?.connected,
+          jira: !!data.jira?.connected,
+          linear: !!data.linear?.connected,
+        })
+        // Only non-secret config is returned — prefill domain/email, never the token.
+        if (data.jira?.domain || data.jira?.email) {
+          setJira({ domain: data.jira.domain ?? "", email: data.jira.email ?? "", token: "" })
         }
-        if (data.linearToken) setLinearToken(data.linearToken)
       })
       .catch(() => {})
   }, [isDemo])
@@ -277,7 +282,7 @@ export default function SettingsPage() {
                         value={githubToken}
                         onChange={(e) => setGithubToken(e.target.value)}
                         type="password"
-                        placeholder="ghp_..."
+                        placeholder={connected.github ? "•••••••• connected — enter a new token to replace" : "ghp_..."}
                       />
                     </Field>
                     <p className="text-xs text-text-secondary leading-relaxed">
@@ -318,7 +323,7 @@ export default function SettingsPage() {
                         value={jira.token}
                         onChange={(e) => setJira({ ...jira, token: e.target.value })}
                         type="password"
-                        placeholder="ATATT..."
+                        placeholder={connected.jira ? "•••••••• connected — enter a new token to replace" : "ATATT..."}
                       />
                     </Field>
                     <p className="text-xs text-text-secondary leading-relaxed">
@@ -343,7 +348,7 @@ export default function SettingsPage() {
                         value={linearToken}
                         onChange={(e) => setLinearToken(e.target.value)}
                         type="password"
-                        placeholder="lin_api_..."
+                        placeholder={connected.linear ? "•••••••• connected — enter a new token to replace" : "lin_api_..."}
                       />
                     </Field>
                     <p className="text-xs text-text-secondary leading-relaxed">
