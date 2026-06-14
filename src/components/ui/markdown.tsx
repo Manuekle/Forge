@@ -64,13 +64,29 @@ export function Markdown({ content }: { content: string }) {
     let raw = content.trim()
 
     // Aggressively strip wrapping markdown code blocks (with or without 'markdown' label)
-    // and also handle cases where the LLM just prepends 'markdown' to the start.
-    const codeBlockMatch = raw.match(/^```(?:markdown)?\n?([\s\S]*?)\n?```$/i)
-    if (codeBlockMatch) {
-      raw = codeBlockMatch[1].trim()
+    // even if there's text before or after (common in LLM responses).
+    // We look for the first ```markdown and the LAST ``` in the whole string.
+    const startIdx = raw.indexOf("```markdown")
+    const endIdx = raw.lastIndexOf("```")
+    if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
+      // Only strip if the ```markdown is at the very beginning (ignoring whitespace)
+      // or if it seems to be the intended main wrapper.
+      if (startIdx < 20) {
+        raw = raw.slice(startIdx + 11, endIdx).trim()
+      }
     } else {
-      raw = raw.replace(/^markdown\s+/i, "").trim()
+      // Also handle simple triple backtick wrappers without the 'markdown' label
+      const simpleStart = raw.indexOf("```")
+      if (simpleStart !== -1 && simpleStart < 20 && endIdx !== -1 && endIdx > simpleStart) {
+        // Only if it's not a mermaid block
+        if (!raw.slice(simpleStart).startsWith("```mermaid")) {
+          raw = raw.slice(simpleStart + 3, endIdx).trim()
+        }
+      }
     }
+    
+    // Final cleanup of leading 'markdown' label
+    raw = raw.replace(/^markdown\s+/i, "").trim()
 
     const lines = raw.split(/\r?\n/)
     const blocks: React.ReactNode[] = []
@@ -83,7 +99,13 @@ export function Markdown({ content }: { content: string }) {
 
       // Code block
       if (trimmed.startsWith("```")) {
-        const lang = trimmed.replace(/^```/, "").trim()
+        const lang = trimmed.replace(/^```/, "").trim().toLowerCase()
+        if (lang === "markdown") {
+          // Transparency layer: ignore the marker and keep parsing content
+          i++
+          continue
+        }
+
         const codeLines: string[] = []
         for (i++; i < lines.length && !lines[i].trim().startsWith("```"); i++) {
           codeLines.push(lines[i])
@@ -123,7 +145,6 @@ export function Markdown({ content }: { content: string }) {
         const mermaidLines: string[] = []
         while (i < lines.length) {
           const l = lines[i].trim()
-          // Stop if we hit an empty line, a heading, a code block start, or another block element
           if (mermaidLines.length > 0 && (!l || l.startsWith("#") || l.startsWith("```") || l.startsWith("|") || l.startsWith("> "))) break
           mermaidLines.push(lines[i])
           i++
@@ -143,7 +164,6 @@ export function Markdown({ content }: { content: string }) {
           rows.push(t.split("|").filter((c, ci) => ci > 0 && ci < t.split("|").length - 1).map((c) => c.trim()))
           i++
         }
-        // Filter out separator rows (all cells are dashes/colons)
         const dataRows = rows.filter((r) => !r.every((c) => /^[ :-]+$/.test(c)))
         if (dataRows.length > 0) {
           blocks.push(
@@ -206,43 +226,38 @@ export function Markdown({ content }: { content: string }) {
         continue
       }
 
-      // Unordered list
-      if (/^[-*+]\s/.test(trimmed)) {
-        const items: string[] = []
-        while (i < lines.length && /^[-*+]\s/.test(lines[i].trim())) {
-          items.push(lines[i].trim().replace(/^[-*+]\s*/, ""))
-          i++
-        }
-        blocks.push(
-          <div key={idx} className="my-1 flex flex-col gap-1 pl-4">
-            {items.map((item, ii) => (
-              <div key={ii} className="flex gap-2 text-sm">
-                <span className="mt-[7px] h-1 w-1 flex-shrink-0 rounded-full bg-text-secondary/40" />
-                <div className="min-w-0 flex-1">{renderInline(item)}</div>
-              </div>
-            ))}
-          </div>
-        )
-        continue
-      }
+      // List items (unordered/ordered)
+      const isUList = /^[-*+]\s/.test(trimmed)
+      const isOList = /^(\d+)[.)]\s/.test(trimmed)
 
-      // Ordered list
-      const oMatch = trimmed.match(/^(\d+)[.)]\s+(.*)$/)
-      if (oMatch) {
+      if (isUList || isOList) {
         const items: string[] = []
-        const nums: string[] = []
+        const isOrdered = isOList
+        const listNums: string[] = []
+
         while (i < lines.length) {
-          const m = lines[i].trim().match(/^(\d+)[.)]\s+(.*)$/)
-          if (!m) break
-          nums.push(m[1])
-          items.push(m[2])
+          const l = lines[i].trim()
+          if (isOrdered) {
+            const m = l.match(/^(\d+)[.)]\s+(.*)$/)
+            if (!m) break
+            listNums.push(m[1])
+            items.push(m[2])
+          } else {
+            if (!/^[-*+]\s/.test(l)) break
+            items.push(l.replace(/^[-*+]\s*/, ""))
+          }
           i++
         }
+
         blocks.push(
           <div key={idx} className="my-1 flex flex-col gap-1 pl-4">
             {items.map((item, ii) => (
               <div key={ii} className="flex gap-2 text-sm">
-                <span className="mt-px font-mono text-[11px] text-text-secondary/60">{nums[ii]}.</span>
+                {isOrdered ? (
+                  <span className="mt-px font-mono text-[11px] text-text-secondary/60">{listNums[ii]}.</span>
+                ) : (
+                  <span className="mt-[7px] h-1 w-1 flex-shrink-0 rounded-full bg-text-secondary/40" />
+                )}
                 <div className="min-w-0 flex-1">{renderInline(item)}</div>
               </div>
             ))}
@@ -258,11 +273,19 @@ export function Markdown({ content }: { content: string }) {
         continue
       }
 
-      // Normal paragraph
-      i++
-      blocks.push(
-        <div key={idx} className="text-sm leading-relaxed text-text-secondary">{renderInline(trimmed)}</div>
-      )
+      // Normal paragraph (group consecutive text lines)
+      const paragraphLines: string[] = []
+      while (i < lines.length) {
+        const l = lines[i].trim()
+        if (!l || l.startsWith("#") || l.startsWith("```") || l.startsWith("|") || l.startsWith("> ") || /^[-*+]\s/.test(l) || /^(\d+)[.)]\s/.test(l)) break
+        paragraphLines.push(lines[i])
+        i++
+      }
+      if (paragraphLines.length > 0) {
+        blocks.push(
+          <div key={idx} className="text-sm leading-relaxed text-text-secondary">{renderInline(paragraphLines.join(" "))}</div>
+        )
+      }
     }
 
     return blocks
