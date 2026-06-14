@@ -5,16 +5,13 @@ import { MermaidDiagram } from "@/components/ui/mermaid-diagram"
 
 function renderInline(text: string) {
   const out: React.ReactNode[] = []
-  // Keys local to this call — a module-global counter would mint new keys on
-  // every render and force React to remount every inline node.
-  let _key = 0
-  const k = () => _key++
 
   const step1 = text.split(/(\[S\d+\])/g)
-  for (const s1 of step1) {
+  for (let i1 = 0; i1 < step1.length; i1++) {
+    const s1 = step1[i1]
     if (/^\[S\d+\]$/.test(s1)) {
       out.push(
-        <span key={k()} className="inline-flex items-center justify-center rounded-full bg-brand/15 px-1.5 font-mono text-[10px] font-semibold text-brand">
+        <span key={`cite-${i1}`} className="inline-flex items-center justify-center rounded-full bg-brand/15 px-1.5 font-mono text-[10px] font-semibold text-brand">
           {s1.slice(1, -1)}
         </span>
       )
@@ -22,25 +19,27 @@ function renderInline(text: string) {
     }
 
     const step2 = s1.split(/(`[^`]+`)/g)
-    for (const s2 of step2) {
+    for (let i2 = 0; i2 < step2.length; i2++) {
+      const s2 = step2[i2]
       if (s2.startsWith("`") && s2.endsWith("`")) {
-        out.push(<code key={k()} className="rounded bg-hover-strong px-1 font-mono text-[11px] text-brand">{s2.slice(1, -1)}</code>)
+        out.push(<code key={`code-${i1}-${i2}`} className="rounded bg-hover-strong px-1 font-mono text-[11px] text-brand">{s2.slice(1, -1)}</code>)
         continue
       }
 
       const step3 = s2.split(/(\*\*[^*]+\*\*)/g)
-      for (const s3 of step3) {
+      for (let i3 = 0; i3 < step3.length; i3++) {
+        const s3 = step3[i3]
         if (s3.startsWith("**") && s3.endsWith("**")) {
-          out.push(<strong key={k()}>{s3.slice(2, -2)}</strong>)
+          out.push(<strong key={`bold-${i1}-${i2}-${i3}`}>{s3.slice(2, -2)}</strong>)
           continue
         }
 
         const step4 = s3.split(/\*([^*]+)\*/g)
-        for (let j = 0; j < step4.length; j++) {
-          if (j % 2 === 1) {
-            out.push(<em key={k()}>{step4[j]}</em>)
-          } else if (step4[j]) {
-            out.push(step4[j])
+        for (let i4 = 0; i4 < step4.length; i4++) {
+          if (i4 % 2 === 1) {
+            out.push(<em key={`italic-${i1}-${i2}-${i3}-${i4}`}>{step4[i4]}</em>)
+          } else if (step4[i4]) {
+            out.push(step4[i4])
           }
         }
       }
@@ -56,7 +55,7 @@ export function stripMarkdown(text: string): string {
     .replace(/\*([^*]+)\*/g, "$1")
     .replace(/`([^`]+)`/g, "$1")
     .replace(/\[S\d+\]/g, "")
-    .replace(/#{2,4}\s+/g, "")
+    .replace(/#{1,6}\s+/g, "")
     .trim()
 }
 
@@ -64,15 +63,16 @@ export function Markdown({ content }: { content: string }) {
   const rendered = useMemo(() => {
     let raw = content.trim()
 
-    // Strip wrapping markdown code block if it encompasses the whole content
-    if (raw.startsWith("```markdown") && raw.endsWith("```")) {
-      raw = raw.replace(/^```markdown\n?/, "").replace(/\n?```$/, "").trim()
-    } else if (raw.toLowerCase().startsWith("markdown\n") || raw.toLowerCase().startsWith("markdown ")) {
-      // Strip leading "markdown" if it's just a label
+    // Aggressively strip wrapping markdown code blocks (with or without 'markdown' label)
+    // and also handle cases where the LLM just prepends 'markdown' to the start.
+    const codeBlockMatch = raw.match(/^```(?:markdown)?\n?([\s\S]*?)\n?```$/i)
+    if (codeBlockMatch) {
+      raw = codeBlockMatch[1].trim()
+    } else {
       raw = raw.replace(/^markdown\s+/i, "").trim()
     }
 
-    const lines = raw.split("\n")
+    const lines = raw.split(/\r?\n/)
     const blocks: React.ReactNode[] = []
     let idx = 0
     let i = 0
@@ -102,24 +102,56 @@ export function Markdown({ content }: { content: string }) {
         continue
       }
 
+      // Unwrapped Mermaid diagram (LLMs sometimes omit the triple backticks)
+      const isMermaidStart =
+        trimmed.startsWith("graph ") ||
+        trimmed.startsWith("flowchart ") ||
+        trimmed.startsWith("sequenceDiagram") ||
+        trimmed.startsWith("classDiagram") ||
+        trimmed.startsWith("stateDiagram") ||
+        trimmed.startsWith("erDiagram") ||
+        trimmed.startsWith("gantt") ||
+        trimmed.startsWith("pie") ||
+        trimmed.startsWith("journey") ||
+        trimmed.startsWith("mindmap") ||
+        trimmed.startsWith("timeline") ||
+        trimmed.startsWith("gitgraph") ||
+        trimmed.startsWith("architecture") ||
+        trimmed.startsWith("c4")
+
+      if (isMermaidStart) {
+        const mermaidLines: string[] = []
+        while (i < lines.length) {
+          const l = lines[i].trim()
+          // Stop if we hit an empty line, a heading, a code block start, or another block element
+          if (mermaidLines.length > 0 && (!l || l.startsWith("#") || l.startsWith("```") || l.startsWith("|") || l.startsWith("> "))) break
+          mermaidLines.push(lines[i])
+          i++
+        }
+        if (mermaidLines.length > 0) {
+          blocks.push(<MermaidDiagram key={idx} definition={mermaidLines.join("\n")} />)
+          continue
+        }
+      }
+
       // Table row
       if (trimmed.startsWith("|") && trimmed.endsWith("|")) {
         const rows: string[][] = []
         while (i < lines.length) {
           const t = lines[i].trim()
           if (!t.startsWith("|") || !t.endsWith("|")) break
-          rows.push(t.split("|").filter(Boolean).map((c) => c.trim()))
+          rows.push(t.split("|").filter((c, ci) => ci > 0 && ci < t.split("|").length - 1).map((c) => c.trim()))
           i++
         }
-        // Filter out separator rows (all cells are dashes)
-        const dataRows = rows.filter((r) => !r.every((c) => /^-+\s*$/.test(c)))
+        // Filter out separator rows (all cells are dashes/colons)
+        const dataRows = rows.filter((r) => !r.every((c) => /^[ :-]+$/.test(c)))
         if (dataRows.length > 0) {
           blocks.push(
             <div key={idx} className="my-3 overflow-auto">
               <table className="w-full border-collapse text-xs">
                 <tbody>
                   {dataRows.map((row, ri) => (
-                    <tr key={ri} className={ri === 0 ? "border-b border-hairline" : ri % 2 === 0 ? "bg-hover" : ""}>
+                    <tr key={ri} className={ri === 0 ? "border-b border-hairline font-semibold" : ri % 2 === 0 ? "bg-hover/30" : ""}>
                       {row.map((cell, ci) => (
                         <td key={ci} className="px-4 py-2.5 text-left text-text-secondary">{renderInline(cell)}</td>
                       ))}
@@ -157,27 +189,28 @@ export function Markdown({ content }: { content: string }) {
         continue
       }
 
-      // Heading #, ##, or ###
-      const hMatch = trimmed.match(/^(#{1,4})\s+(.+)$/)
+      // Heading # to ######
+      const hMatch = trimmed.match(/^(#{1,6})\s+(.+)$/)
       if (hMatch) {
         i++
         const level = hMatch[1].length
         const text = hMatch[2]
-        const cls = level <= 2
-          ? "mb-2 mt-5 text-sm font-semibold text-text-primary"
+        const cls = level === 1
+          ? "mb-4 mt-6 text-base font-bold text-text-primary"
+          : level === 2
+          ? "mb-2 mt-5 text-sm font-semibold text-text-primary border-b border-hairline pb-1"
           : "mb-1 mt-4 text-sm font-semibold text-text-primary"
-        blocks.push(level <= 2
-          ? <h2 key={idx} className={cls}>{renderInline(text)}</h2>
-          : <h3 key={idx} className={cls}>{renderInline(text)}</h3>
-        )
+        
+        const Tag = level === 1 ? "h1" : level === 2 ? "h2" : "h3" as any
+        blocks.push(<Tag key={idx} className={cls}>{renderInline(text)}</Tag>)
         continue
       }
 
       // Unordered list
-      if (/^[-*]\s/.test(trimmed)) {
+      if (/^[-*+]\s/.test(trimmed)) {
         const items: string[] = []
-        while (i < lines.length && /^[-*]\s/.test(lines[i].trim())) {
-          items.push(lines[i].trim().replace(/^[-*]\s*/, ""))
+        while (i < lines.length && /^[-*+]\s/.test(lines[i].trim())) {
+          items.push(lines[i].trim().replace(/^[-*+]\s*/, ""))
           i++
         }
         blocks.push(
