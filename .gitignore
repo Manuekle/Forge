@@ -40,6 +40,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# remotion (video rendering config — not part of the Next.js app)
+/remotion/
+
 # recordings
 /recordings/
 /screenshots/
