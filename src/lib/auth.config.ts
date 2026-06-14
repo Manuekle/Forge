@@ -2,12 +2,19 @@ import type { NextAuthConfig } from "next-auth"
 import Credentials from "next-auth/providers/credentials"
 import MicrosoftEntraID from "next-auth/providers/microsoft-entra-id"
 
+// A blank env var ("") is NOT undefined, so passing it straight to the provider
+// would override the safe default with an empty issuer and break OIDC discovery
+// (→ `error=Configuration`). Coerce blank/whitespace to undefined so the
+// provider falls back to the multi-tenant default when no real issuer is set.
+const microsoftIssuer = process.env.AUTH_MICROSOFT_ENTRA_ID_ISSUER?.trim() || undefined
+
 export const authConfig: NextAuthConfig = {
+  trustHost: true,
   providers: [
     MicrosoftEntraID({
       clientId: process.env.AUTH_MICROSOFT_ENTRA_ID_ID,
       clientSecret: process.env.AUTH_MICROSOFT_ENTRA_ID_SECRET,
-      issuer: process.env.AUTH_MICROSOFT_ENTRA_ID_ISSUER,
+      issuer: microsoftIssuer,
     }),
     Credentials({
       name: "credentials",
@@ -49,6 +56,9 @@ export const authConfig: NextAuthConfig = {
   ],
   pages: {
     signIn: "/auth/signin",
+    // Route provider/config errors back to our own page (with ?error=...)
+    // instead of the unstyled default /api/auth/error screen.
+    error: "/auth/signin",
   },
   callbacks: {
     async jwt({ token, user, account }) {

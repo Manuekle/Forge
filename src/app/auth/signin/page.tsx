@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import { Suspense } from "react"
 import SignInPage from "./page-client"
 
 export const metadata: Metadata = {
@@ -15,5 +16,9 @@ export const metadata: Metadata = {
 }
 
 export default function Page() {
-  return <SignInPage />
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-canvas" />}>
+      <SignInPage />
+    </Suspense>
+  )
 }

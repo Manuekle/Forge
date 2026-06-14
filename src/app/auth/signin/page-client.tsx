@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useSearchParams } from "next/navigation"
 import { signIn } from "next-auth/react"
 import Image from "next/image"
 import { motion } from "framer-motion"
@@ -9,10 +10,24 @@ import { Input } from "@/components/ui/input"
 import { Icon } from "@/components/ui/icon"
 import { SparklesIcon, Mail01Icon, LockIcon } from "@hugeicons/core-free-icons"
 
+// NextAuth redirects failed OAuth/config attempts back here with ?error=<code>.
+// Map the codes to messages users can act on instead of a raw enum.
+const AUTH_ERROR_MESSAGES: Record<string, string> = {
+  Configuration: "Microsoft sign-in is not available right now. Please use email, or try again later.",
+  OAuthSignin: "Couldn't start Microsoft sign-in. Please try again.",
+  OAuthCallback: "Microsoft sign-in didn't complete. Please try again.",
+  OAuthAccountNotLinked: "This email is already registered. Sign in with your email and password.",
+  AccessDenied: "Access denied. Your Microsoft account isn't allowed to sign in here.",
+}
+
 export default function SignInPage() {
+  const searchParams = useSearchParams()
+  const urlError = searchParams.get("error")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-  const [error, setError] = useState("")
+  const [error, setError] = useState(
+    urlError ? AUTH_ERROR_MESSAGES[urlError] ?? "Something went wrong signing in. Please try again." : ""
+  )
   const [loading, setLoading] = useState(false)
 
   async function handleSubmit(e: React.FormEvent) {
