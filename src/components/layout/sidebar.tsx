@@ -21,7 +21,6 @@ const navItems = [
   { label: "Dashboard", href: "/dashboard", icon: DashboardSquare01Icon },
   { label: "Projects", href: "/projects", icon: AiFolder01Icon },
   { label: "Agents", href: "/agents", icon: ChatBotIcon },
-  { label: "Settings", href: "/settings", icon: Settings02Icon },
 ]
 
 interface SidebarProps {
@@ -110,10 +109,10 @@ function UserCard() {
       <button
         onClick={() => { setOpen(!open) }}
         aria-label="User menu"
-        className="flex w-full items-center gap-3 rounded-full bg-surface-2 p-3 text-left lift-1 transition-colors hover:bg-surface-3"
+        className="flex w-full items-center gap-3 rounded-2xl bg-surface-2 p-3 text-left lift-1 transition-colors hover:bg-surface-3"
       >
-        <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full gradient-brand text-white">
-          <Icon icon={AiUserIcon} size={18} />
+        <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full gradient-brand text-xs font-bold text-white">
+          J
         </div>
         <div className="min-w-0 flex-1">
           <div className="truncate text-xs font-medium text-text-primary">Jane Doe</div>
