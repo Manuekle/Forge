@@ -69,20 +69,21 @@ function ConfidenceGauge({ value }: { value: number }) {
   const r = 34
   const c = 2 * Math.PI * r
   const dash = (value * c).toFixed(1)
-  const color = value >= 0.75 ? "#2ED47A" : value >= 0.5 ? "#FCD34D" : "#F87171"
+  const color = value >= 0.75 ? "var(--color-success)" : value >= 0.5 ? "var(--color-warning)" : "var(--color-error)"
   return (
-    <div className="relative h-[88px] w-[88px] shrink-0">
-      <svg viewBox="0 0 80 80" className="h-[88px] w-[88px] -rotate-90">
-        <circle cx="40" cy="40" r={r} fill="none" stroke="var(--color-hairline-strong)" strokeWidth="6" />
+    <div className="relative h-[92px] w-[92px] shrink-0">
+      <svg viewBox="0 0 80 80" className="h-[92px] w-[92px] -rotate-90">
+        <circle cx="40" cy="40" r={r} fill="none" stroke="var(--color-hairline-strong)" strokeWidth="5" />
         <circle
-          cx="40" cy="40" r={r} fill="none" stroke={color} strokeWidth="6" strokeLinecap="round"
+          cx="40" cy="40" r={r} fill="none" stroke={color} strokeWidth="5" strokeLinecap="round"
           strokeDasharray={`${dash} ${c}`}
-          style={{ filter: `drop-shadow(0 0 6px ${color}66)` }}
+          className="transition-all duration-1000 ease-out"
+          style={{ filter: `drop-shadow(0 0 8px ${color}44)` }}
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-2xl font-semibold text-text-primary" style={syne}>{pct}</span>
-        <span className="text-[9px] uppercase tracking-[0.12em] text-muted">confidence</span>
+        <span className="text-2xl font-bold tracking-tight text-text-primary leading-none" style={syne}>{pct}%</span>
+        <span className="mt-0.5 text-[10px] font-medium text-muted">Confidence</span>
       </div>
     </div>
   )
@@ -90,9 +91,9 @@ function ConfidenceGauge({ value }: { value: number }) {
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <div className="mb-4 flex items-center gap-2.5">
-      <span className="h-px w-6 bg-gradient-to-r from-brand to-transparent" />
-      <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">{children}</h2>
+    <div className="mb-6 flex items-center gap-3">
+      <h2 className="text-[13px] font-semibold tracking-tight text-muted/80">{children}</h2>
+      <div className="h-px flex-1 bg-gradient-to-r from-hairline to-transparent" />
     </div>
   )
 }
@@ -110,56 +111,71 @@ export default async function DecisionRecordPage(
   })
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-canvas text-text-primary">
+    <div className="relative min-h-screen overflow-hidden bg-canvas text-text-primary selection:bg-brand/20">
       {/* Atmosphere: brand aurora + grain, matching the app shell */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-[520px] aurora opacity-70" />
-      <div className="pointer-events-none absolute inset-0 bg-noise" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-[640px] aurora opacity-80" />
+      <div className="pointer-events-none absolute inset-0 bg-noise opacity-[0.03]" />
 
       {/* Top bar */}
-      <header className="sticky top-0 z-20 border-b border-hairline bg-canvas/70 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-3xl items-center justify-between px-5 py-3.5">
+      <header className="sticky top-0 z-20 border-b border-hairline bg-canvas/60 backdrop-blur-2xl">
+        <div className="mx-auto flex max-w-3xl items-center justify-between px-6 py-4">
           <Brand />
           <Link
             href="/"
-            className="btn-brand sheen rounded-full px-4 py-1.5 text-xs font-semibold text-brand-fg"
+            className="btn-brand sheen rounded-full px-5 py-2 text-xs font-bold text-brand-fg"
           >
-            Build your own
+            Create yours
           </Link>
         </div>
       </header>
 
-      <main className="relative z-10 mx-auto max-w-3xl px-5 pb-16 pt-12">
+      <main className="relative z-10 mx-auto max-w-3xl px-6 pb-24 pt-16">
         {/* Eyebrow */}
-        <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-brand-subtle px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-brand ring-hair">
+        <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-brand/5 px-3 py-1 text-[11px] font-bold tracking-tight text-brand ring-1 ring-brand/20">
           <span className="relative flex h-1.5 w-1.5">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand opacity-50" />
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand opacity-40" />
             <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-brand" />
           </span>
-          Decision Record
+          Decision record
         </div>
 
         {/* Title */}
-        <h1 className="text-4xl font-semibold leading-[1.05] tracking-tight sm:text-5xl" style={syne}>
+        <h1 className="gradient-text text-4xl font-bold leading-[1.1] tracking-tight sm:text-6xl" style={syne}>
           {rec.projectName}
         </h1>
         {rec.projectDescription && (
-          <p className="mt-3.5 max-w-2xl text-[15px] leading-relaxed text-text-secondary">
+          <p className="mt-5 max-w-2xl text-[16px] leading-relaxed text-text-secondary/90">
             {rec.projectDescription}
           </p>
         )}
-        <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
-          <span>{date}</span>
-          {rec.durationSeconds != null && <><span className="text-faint">·</span><span>decided in {rec.durationSeconds}s</span></>}
-          {rec.planSource && <><span className="text-faint">·</span><span>{rec.planSource === "model" ? "AI-orchestrated" : "default"} plan</span></>}
+        <div className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-2 text-[12px] font-medium text-muted/60">
+          <span className="flex items-center gap-2">
+            <svg viewBox="0 0 16 16" fill="none" className="h-3.5 w-3.5 opacity-50">
+              <path d="M8 4V8L10.5 9.5M14 8C14 11.3137 11.3137 14 8 14C4.68629 14 2 11.3137 2 8C2 4.68629 4.68629 2 8 2C11.3137 2 14 4.68629 14 8Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            {date}
+          </span>
+          {rec.durationSeconds != null && (
+            <span className="flex items-center gap-2">
+              <span className="h-1 w-1 rounded-full bg-faint/30" />
+              Decided in {rec.durationSeconds}s
+            </span>
+          )}
+          {rec.planSource && (
+            <span className="flex items-center gap-2">
+              <span className="h-1 w-1 rounded-full bg-faint/30" />
+              {rec.planSource === "model" ? "AI-orchestrated" : "Standard"} plan
+            </span>
+          )}
         </div>
 
         {/* Consensus + confidence */}
-        <section className="mt-9 overflow-hidden rounded-[var(--radius-card)] gradient-card p-7 lift-2 ring-hair">
-          <div className="flex flex-col items-start gap-6 sm:flex-row sm:items-center">
+        <section className="halo-warm mt-12 overflow-hidden rounded-[var(--radius-card)] p-px ring-1 ring-white/10">
+          <div className="gradient-card flex flex-col items-start gap-8 rounded-[calc(var(--radius-card)-1px)] p-8 sm:flex-row sm:items-center">
             {rec.confidence != null && <ConfidenceGauge value={rec.confidence} />}
             <div className="min-w-0">
-              <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-brand">Consensus</h2>
-              <p className="mt-2 text-[15px] leading-relaxed text-text-primary">
+              <h2 className="text-[12px] font-bold tracking-tight text-brand">Consensus</h2>
+              <p className="mt-2.5 text-[17px] font-medium leading-relaxed text-text-primary">
                 {rec.consensus || "The team completed its analysis."}
               </p>
             </div>
@@ -168,31 +184,35 @@ export default async function DecisionRecordPage(
 
         {/* Strategy / plan */}
         {(rec.strategy || rec.selected.length > 0) && (
-          <section className="mt-10">
-            <SectionLabel>How the team approached it</SectionLabel>
+          <section className="mt-14">
+            <SectionLabel>Strategy & Implementation</SectionLabel>
             {rec.strategy && (
-              <p className="mb-5 text-[15px] leading-relaxed text-text-secondary">{rec.strategy}</p>
+              <p className="mb-7 text-[16px] leading-relaxed text-text-secondary">{rec.strategy}</p>
             )}
-            <div className="flex flex-col gap-2.5">
+            <div className="flex flex-col gap-3">
               {rec.selected.map((s) => (
                 <div
                   key={s.agent}
-                  className="rounded-2xl bg-surface p-4 ring-hair transition-shadow hover:lift-1"
+                  className="group relative rounded-2xl bg-surface/50 p-5 ring-1 ring-hairline transition-all hover:bg-surface hover:ring-hairline-strong"
                 >
-                  <span className="inline-flex rounded-full bg-brand-subtle px-2.5 py-0.5 text-xs font-semibold text-brand ring-hair">
-                    {label(s.agent)}
-                  </span>
-                  <p className="mt-2 text-sm leading-relaxed text-text-secondary">{s.reason}</p>
+                  <div className="flex items-center gap-3">
+                    <span className="inline-flex rounded-full bg-brand-subtle px-2.5 py-1 text-[11px] font-bold text-brand ring-1 ring-brand/20">
+                      {label(s.agent)}
+                    </span>
+                  </div>
+                  <p className="mt-3 text-[15px] leading-relaxed text-text-secondary group-hover:text-text-primary transition-colors">{s.reason}</p>
                 </div>
               ))}
               {rec.skipped.length > 0 && (
-                <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-muted">
-                  <span className="font-medium">Skipped</span>
-                  {rec.skipped.map((s) => (
-                    <span key={s.agent} title={s.reason} className="rounded-full bg-surface-2 px-2 py-0.5 ring-hair">
-                      {label(s.agent)}
-                    </span>
-                  ))}
+                <div className="mt-2 flex flex-wrap items-center gap-2 text-[13px] text-muted">
+                  <span className="font-semibold text-muted/60">Skipped phases:</span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {rec.skipped.map((s) => (
+                      <span key={s.agent} title={s.reason} className="rounded-full bg-surface-2 px-2.5 py-0.5 text-xs font-medium ring-1 ring-hairline">
+                        {label(s.agent)}
+                      </span>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
@@ -201,35 +221,37 @@ export default async function DecisionRecordPage(
 
         {/* Votes */}
         {rec.votes.length > 0 && (
-          <section className="mt-10">
-            <SectionLabel>Votes &amp; dissent</SectionLabel>
-            <div className="overflow-hidden rounded-2xl bg-surface ring-hair">
-              <table className="w-full text-left text-sm">
-                <thead className="bg-surface-2 text-[11px] uppercase tracking-[0.1em] text-muted">
+          <section className="mt-14">
+            <SectionLabel>Collaborative alignment</SectionLabel>
+            <div className="overflow-hidden rounded-2xl bg-surface/30 ring-1 ring-hairline">
+              <table className="w-full text-left text-[13px]">
+                <thead className="bg-surface-2/50 text-muted/80">
                   <tr>
-                    <th className="px-4 py-3 font-semibold">Agent</th>
-                    <th className="px-4 py-3 font-semibold">Vote</th>
-                    <th className="px-4 py-3 font-semibold">Conf.</th>
-                    <th className="px-4 py-3 font-semibold">Concern</th>
+                    <th className="px-5 py-4 font-bold">Agent</th>
+                    <th className="px-5 py-4 font-bold">Vote</th>
+                    <th className="px-5 py-4 font-bold text-center">Confidence</th>
+                    <th className="px-5 py-4 font-bold">Primary concern</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-hairline">
                   {rec.votes.map((v) => (
-                    <tr key={v.agent} className="border-t border-hairline">
-                      <td className="px-4 py-3 font-medium text-text-primary">{label(v.agent)}</td>
-                      <td className="px-4 py-3">
+                    <tr key={v.agent} className="transition-colors hover:bg-white/[0.02]">
+                      <td className="px-5 py-4 font-bold text-text-primary">{label(v.agent)}</td>
+                      <td className="px-5 py-4">
                         <span
-                          className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium"
-                          style={{ color: VOTE_COLORS[v.vote] ?? "#71717A", background: `${VOTE_COLORS[v.vote] ?? "#71717A"}1a` }}
+                          className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-bold shadow-sm"
+                          style={{ color: VOTE_COLORS[v.vote] ?? "#71717A", background: `${VOTE_COLORS[v.vote] ?? "#71717A"}15`, ring: `1px solid ${VOTE_COLORS[v.vote] ?? "#71717A"}33` }}
                         >
                           <span className="h-1.5 w-1.5 rounded-full" style={{ background: VOTE_COLORS[v.vote] ?? "#71717A" }} />
                           {VOTE_LABELS[v.vote] ?? v.vote}
                         </span>
                       </td>
-                      <td className="px-4 py-3 font-mono text-xs text-text-secondary">
-                        {v.confidence != null ? v.confidence.toFixed(2) : "—"}
+                      <td className="px-5 py-4 text-center">
+                        <span className="font-mono text-xs font-semibold text-text-secondary bg-surface-2 px-2 py-0.5 rounded-md ring-1 ring-hairline">
+                          {v.confidence != null ? v.confidence.toFixed(2) : "—"}
+                        </span>
                       </td>
-                      <td className="px-4 py-3 text-xs text-text-secondary">{v.concerns || "—"}</td>
+                      <td className="px-5 py-4 text-xs leading-relaxed text-text-secondary">{v.concerns || "No major concerns raised."}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -240,17 +262,23 @@ export default async function DecisionRecordPage(
 
         {/* Sources */}
         {rec.citations.length > 0 && (
-          <section className="mt-10">
-            <SectionLabel>Grounded sources</SectionLabel>
-            <div className="flex flex-col gap-2.5">
+          <section className="mt-14">
+            <SectionLabel>Grounded intelligence</SectionLabel>
+            <div className="grid gap-3">
               {rec.citations.map((c) => (
-                <div key={c.ref} className="rounded-2xl bg-surface p-4 ring-hair">
-                  <div className="flex items-center gap-2 text-xs">
-                    <span className="rounded-full bg-surface-2 px-2 py-0.5 font-mono text-muted ring-hair">[{c.ref}]</span>
-                    <span className="font-medium text-text-primary">{c.title}</span>
-                    <span className="ml-auto shrink-0 text-muted">{c.source}</span>
+                <div key={c.ref} className="group relative rounded-2xl bg-surface/40 p-5 ring-1 ring-hairline transition-all hover:bg-surface hover:ring-hairline-strong">
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-6 min-w-[24px] items-center justify-center rounded-lg bg-surface-3 font-mono text-[11px] font-bold text-brand ring-1 ring-hairline">
+                      {c.ref}
+                    </span>
+                    <span className="text-[14px] font-bold text-text-primary line-clamp-1">{c.title}</span>
+                    <span className="ml-auto shrink-0 text-[11px] font-bold tracking-tight text-muted/60">{c.source}</span>
                   </div>
-                  {c.snippet && <p className="mt-2 text-xs leading-relaxed text-text-secondary">{c.snippet}</p>}
+                  {c.snippet && (
+                    <p className="mt-3 text-[13px] leading-relaxed text-text-secondary group-hover:text-text-secondary transition-colors line-clamp-2 italic opacity-80">
+                      "{c.snippet}"
+                    </p>
+                  )}
                 </div>
               ))}
             </div>
@@ -258,32 +286,44 @@ export default async function DecisionRecordPage(
         )}
 
         {/* Footer CTA */}
-        <footer className="relative mt-16 overflow-hidden rounded-[var(--radius-panel)] gradient-card p-9 text-center lift-2 ring-hair">
-          <div className="pointer-events-none absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-brand to-transparent opacity-60" />
-          <div className="mb-5 flex justify-center">
-            <Brand size="lg" />
+        <footer className="neon-card mt-24 overflow-hidden rounded-[var(--radius-panel)] p-px">
+          <div className="gradient-card relative flex flex-col items-center rounded-[calc(var(--radius-panel)-1px)] px-8 py-12 text-center">
+            <div className="absolute inset-0 bg-rings opacity-20" />
+            <div className="relative mb-8 flex justify-center scale-110">
+              <Brand size="lg" />
+            </div>
+            <h3 className="relative text-3xl font-bold tracking-tight sm:text-4xl" style={syne}>
+              Defensible decisions,<br />built in minutes.
+            </h3>
+            <p className="relative mx-auto mt-4 max-w-md text-[15px] leading-relaxed text-text-secondary">
+              Forge orchestrates specialized AI agents to plan, debate, and validate your product ideas with traceable receipts.
+            </p>
+            <Link
+              href="/"
+              className="btn-brand sheen relative mt-10 inline-flex items-center gap-2 rounded-full px-8 py-3.5 text-sm font-bold text-brand-fg"
+            >
+              Start building with Forge
+              <svg viewBox="0 0 16 16" fill="none" className="h-4 w-4">
+                <path d="M6 12L10 8L6 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </Link>
           </div>
-          <h3 className="text-2xl font-semibold tracking-tight" style={syne}>
-            Turn your idea into a decision you can defend.
-          </h3>
-          <p className="mx-auto mt-2.5 max-w-md text-sm leading-relaxed text-text-secondary">
-            Forge runs an AI product team — PM, UX, architect, QA — that plans, debates, votes, and
-            ships traceable specs. Every decision comes with its receipts.
-          </p>
-          <Link
-            href="/"
-            className="btn-brand sheen mt-6 inline-flex rounded-full px-6 py-2.5 text-sm font-semibold text-brand-fg"
-          >
-            Build with Forge — free
-          </Link>
         </footer>
 
-        <p className="mt-7 text-center text-xs text-muted">
-          Generated by{" "}
-          <Link href="/" className="font-medium text-brand hover:text-brand-hover">Forge</Link>
-          {" "}· multi-agent product decisions of record
-        </p>
+        <div className="mt-12 flex flex-col items-center gap-3 text-center">
+          <p className="text-[13px] font-medium text-muted/50">
+            Automated multi-agent product decisions of record
+          </p>
+          <div className="flex items-center gap-2">
+            <Link href="/" className="text-[12px] font-bold text-brand hover:text-brand-hover transition-colors">Forge</Link>
+            <span className="h-1 w-1 rounded-full bg-faint opacity-40" />
+            <Link href="/privacy" className="text-[12px] font-medium text-muted/40 hover:text-muted transition-colors">Privacy</Link>
+            <span className="h-1 w-1 rounded-full bg-faint opacity-40" />
+            <Link href="/terms" className="text-[12px] font-medium text-muted/40 hover:text-muted transition-colors">Terms</Link>
+          </div>
+        </div>
       </main>
     </div>
   )
 }
+
