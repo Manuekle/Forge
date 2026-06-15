@@ -8,7 +8,6 @@ import { ArrowExpand01Icon, RefreshIcon } from "@hugeicons/core-free-icons"
 import { Icon } from "@/components/ui/icon"
 
 let renderSeq = 0
-let lastTheme: string | null = null
 
 const diagramTypes: Record<string, string> = {
   graph: "Flowchart",
@@ -247,7 +246,6 @@ export function MermaidDiagram({ definition }: { definition: string }) {
           flowchart: { htmlLabels: false },
           themeVariables: isDark ? darkThemeVariables : lightThemeVariables,
         })
-        lastTheme = theme
 
         for (const def of candidates(definition)) {
           const renderId = `mermaid-r${++renderSeq}`

@@ -6,7 +6,7 @@ import Image from "next/image"
 import { createClient } from "@/lib/supabase/client"
 import { motion, AnimatePresence } from "framer-motion"
 import {
-  DashboardSquare01Icon, AiFolder01Icon, ChatBotIcon, Settings02Icon, ArrowLeft01Icon, Add01Icon, SparklesIcon, Logout01Icon, AiUserIcon, ArrowUp01Icon, Tick01Icon, Edit01Icon, Cancel01Icon
+  DashboardSquare01Icon, AiFolder01Icon, ChatBotIcon, Settings02Icon, ArrowLeft01Icon, Add01Icon, SparklesIcon, Logout01Icon, ArrowUp01Icon, Tick01Icon, Edit01Icon, Cancel01Icon
 } from "@hugeicons/core-free-icons"
 import { Icon } from "@/components/ui/icon"
 import { cn } from "@/lib/utils"

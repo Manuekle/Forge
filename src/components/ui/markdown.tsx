@@ -221,7 +221,7 @@ export function Markdown({ content }: { content: string }) {
           ? "mb-2 mt-5 text-sm font-semibold text-text-primary border-b border-hairline pb-1"
           : "mb-1 mt-4 text-sm font-semibold text-text-primary"
         
-        const Tag = level === 1 ? "h1" : level === 2 ? "h2" : "h3" as any
+        const Tag = (level === 1 ? "h1" : level === 2 ? "h2" : "h3") as "h1" | "h2" | "h3"
         blocks.push(<Tag key={idx} className={cls}>{renderInline(text)}</Tag>)
         continue
       }

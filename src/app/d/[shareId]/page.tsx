@@ -240,7 +240,11 @@ export default async function DecisionRecordPage(
                       <td className="px-5 py-4">
                         <span
                           className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-bold shadow-sm"
-                          style={{ color: VOTE_COLORS[v.vote] ?? "#71717A", background: `${VOTE_COLORS[v.vote] ?? "#71717A"}15`, ring: `1px solid ${VOTE_COLORS[v.vote] ?? "#71717A"}33` }}
+                          style={{
+                            color: VOTE_COLORS[v.vote] ?? "#71717A",
+                            background: `${VOTE_COLORS[v.vote] ?? "#71717A"}15`,
+                            boxShadow: `inset 0 0 0 1px ${VOTE_COLORS[v.vote] ?? "#71717A"}33`
+                          }}
                         >
                           <span className="h-1.5 w-1.5 rounded-full" style={{ background: VOTE_COLORS[v.vote] ?? "#71717A" }} />
                           {VOTE_LABELS[v.vote] ?? v.vote}
@@ -276,7 +280,7 @@ export default async function DecisionRecordPage(
                   </div>
                   {c.snippet && (
                     <p className="mt-3 text-[13px] leading-relaxed text-text-secondary group-hover:text-text-secondary transition-colors line-clamp-2 italic opacity-80">
-                      "{c.snippet}"
+                      &ldquo;{c.snippet}&rdquo;
                     </p>
                   )}
                 </div>
