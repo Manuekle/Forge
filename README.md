@@ -26,7 +26,7 @@ A multi-agent AI platform where a complete digital product team — PM, UX, Arch
 |---|---|
 | **Track** | 🧠 Reasoning Agents — Build with Microsoft Foundry |
 | **Microsoft IQ layer** | **Foundry IQ** — agent reasoning, orchestration planning and grounded knowledge retrieval |
-| **Demo login** | `demo@forge.dev` / `forge` (seeded demo workspace included) |
+| **Demo login** | `demo@forge.dev` / `forgedemo` (seeded demo workspace included) |
 
 ---
 
