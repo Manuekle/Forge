@@ -38,7 +38,7 @@ const fadeUp = {
 export default function SettingsPage() {
   const { toast } = useToast()
 
-  const [profile, setProfile] = useState(() => load(LS_PROFILE, { name: "Jane Doe", email: "jane@forge.dev" }))
+  const [profile, setProfile] = useState(() => load(LS_PROFILE, { name: "", email: "" }))
   const [workspace, setWorkspace] = useState(() => load(LS_WORKSPACE, { name: "Forge Team" }))
   const [api, setApi] = useState(() => load(LS_API, { endpoint: "", key: "", deployment: "grok-4-20-reasoning", timeout: "180000" }))
   const [githubToken, setGithubToken] = useState("")
@@ -54,6 +54,17 @@ export default function SettingsPage() {
   const [connected, setConnected] = useState({ github: false, jira: false, linear: false })
 
   const isDemo = profile.email === "demo@forge.dev"
+
+  useEffect(() => {
+    createClient().auth.getUser().then(({ data: { user: u } }) => {
+      if (u) {
+        setProfile({
+          name: u.user_metadata?.name || u.email?.split("@")[0] || "User",
+          email: u.email || "",
+        })
+      }
+    })
+  }, [])
 
   useEffect(() => {
     fetch("/api/user/settings")

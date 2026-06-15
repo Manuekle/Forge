@@ -93,8 +93,20 @@ function Logo() {
 function UserCard() {
   const [open, setOpen] = useState(false)
   const [showUpgrade, setShowUpgrade] = useState(false)
+  const [user, setUser] = useState<{ name: string; email: string } | null>(null)
   const ref = useRef<HTMLDivElement>(null)
   const router = useRouter()
+
+  useEffect(() => {
+    createClient().auth.getUser().then(({ data: { user: u } }) => {
+      if (u) {
+        setUser({
+          name: u.user_metadata?.name || u.email?.split("@")[0] || "User",
+          email: u.email || "",
+        })
+      }
+    })
+  }, [])
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -112,10 +124,10 @@ function UserCard() {
         className="flex w-full items-center gap-3 rounded-2xl bg-surface-2 p-3 text-left lift-1 transition-colors hover:bg-surface-3"
       >
         <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full gradient-brand text-xs font-bold text-white">
-          J
+          {user ? user.name.charAt(0).toUpperCase() : "?"}
         </div>
         <div className="min-w-0 flex-1">
-          <div className="truncate text-xs font-medium text-text-primary">Jane Doe</div>
+          <div className="truncate text-xs font-medium text-text-primary">{user?.name ?? "Loading\u2026"}</div>
           <div className="flex items-center gap-1 text-[10px] text-muted">
             <Icon icon={SparklesIcon} size={10} className="text-brand" />
             Forge Pro
