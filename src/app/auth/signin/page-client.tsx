@@ -118,7 +118,8 @@ export default function SignInPage() {
             disabled={loading}
             onClick={() => handleOAuth("github")}
           >
-            <Image src="/sponsors/GitHub_light.svg" alt="" width={15} height={15} className="h-[15px] w-[15px]" />
+            <Image src="/sponsors/GitHub_light.svg" alt="" width={15} height={15} className="h-[15px] w-[15px] dark:hidden" />
+            <Image src="/sponsors/GitHub_dark.svg" alt="" width={15} height={15} className="h-[15px] w-[15px] hidden dark:block" />
             Continue with GitHub
           </Button>
 
