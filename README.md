@@ -149,7 +149,7 @@ npm run db:push
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) → sign in with `demo@forge.dev` / `forge` (requires `ALLOW_DEMO_LOGIN=true`), or create a real account at `/auth/register`. A seeded demo workspace (projects, a replayed orchestration run, decisions and artifacts) loads on first visit.
+Open [http://localhost:3000](http://localhost:3000) → sign in with `demo@forge.dev` / `forgedemo` (requires `ALLOW_DEMO_LOGIN=true`), or create a real account at `/auth/register`. A seeded demo workspace (projects, a replayed orchestration run, decisions and artifacts) loads on first visit.
 
 > Using Postgres? Apply migrations with `npm run db:migrate` (or `npm run db:push` for dev). `npm install` also pulls the test toolchain — run `npm test` to verify.
 
