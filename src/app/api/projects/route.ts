@@ -7,12 +7,7 @@ import { rateLimit } from "@/lib/rate-limit"
 export async function GET() {
   const authed = await requireUser()
   if (!authed.ok) return authed.response
-  let all = await store.getProjects(authed.userId)
-  // First visit: populate the workspace with demo projects for this user.
-  if (all.length === 0) {
-    await store.seed(authed.userId)
-    all = await store.getProjects(authed.userId)
-  }
+  const all = await store.getProjects(authed.userId)
   return NextResponse.json(all)
 }
 
